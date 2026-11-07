@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="{{ lang }}" dir="{{ dir }}">
+<head>
+<meta charset="utf-8">
+<title>{{ cv.contact.name }}</title>
+<style>
+  @font-face { font-family: "NotoSans"; font-weight: 400; src: url("{{ fonts.latin }}"); }
+  @font-face { font-family: "NotoSans"; font-weight: 700; src: url("{{ fonts.latin_bold }}"); }
+  @font-face { font-family: "NotoNaskhArabic"; font-weight: 400; src: url("{{ fonts.arabic }}"); }
+  @font-face { font-family: "NotoNaskhArabic"; font-weight: 700; src: url("{{ fonts.arabic_bold }}"); }
+  @page { size: A4; margin: 16mm 18mm; }
+  body {
+    font-family: {% if lang == "ar" %}"NotoNaskhArabic", "NotoSans"{% else %}"NotoSans", "NotoNaskhArabic"{% endif %}, sans-serif;
+    font-size: 10.5pt; line-height: {{ "1.6" if lang == "ar" else "1.4" }}; color: #111;
+  }
+  h1 { font-size: 20pt; margin: 0 0 2pt; }
+  .contact { color: #333; margin-bottom: 10pt; }
+  .contact span + span::before { content: " · "; }
+  h2 { font-size: 12pt; text-transform: {{ "none" if lang == "ar" else "uppercase" }};
+       border-bottom: 1px solid #888; margin: 12pt 0 5pt; padding-bottom: 2pt; }
+  .entry { margin-bottom: 7pt; page-break-inside: avoid; }
+  .head { display: flex; justify-content: space-between; gap: 8pt; }
+  .role { font-weight: bold; }
+  .dates { white-space: nowrap; color: #333; }
+  .org { color: #333; }
+  ul { margin: 2pt 0 0; padding-inline-start: 14pt; }
+  li { margin-bottom: 1pt; }
+  p { margin: 0; }
+</style>
+</head>
+<body>
+  <h1>{{ cv.contact.name }}</h1>
+  <div class="contact">
+    {%- for item in contact_items %}<span>{% if item.ltr %}<bdi dir="ltr">{{ item.text }}</bdi>{% else %}{{ item.text }}{% endif %}</span>{% endfor -%}
+  </div>
+
+  {% if cv.summary %}
+  <h2>{{ t.summary }}</h2>
+  <p>{{ cv.summary }}</p>
+  {% endif %}
+
+  {% if cv.experience %}
+  <h2>{{ t.experience }}</h2>
+  {% for e in cv.experience %}
+  <div class="entry">
+    <div class="head">
+      <span class="role">{{ e.title }}</span>
+      <span class="dates"><bdi>{{ e.start }}</bdi>{% if e.end %} – <bdi>{{ e.end }}</bdi>{% endif %}</span>
+    </div>
+    <div class="org">{{ e.employer }}{% if e.location %}{{ t.comma }}{{ e.location }}{% endif %}</div>
+    {% if e.bullets %}<ul>{% for b in e.bullets %}<li>{{ b }}</li>{% endfor %}</ul>{% endif %}
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% if cv.education %}
+  <h2>{{ t.education }}</h2>
+  {% for d in cv.education %}
+  <div class="entry">
+    <div class="head">
+      <span class="role">{{ d.degree }}</span>
+      <span class="dates"><bdi>{{ d.start }}</bdi>{% if d.end %} – <bdi>{{ d.end }}</bdi>{% endif %}</span>
+    </div>
+    <div class="org">{{ d.institution }}</div>
+    {% if d.details %}<ul>{% for x in d.details %}<li>{{ x }}</li>{% endfor %}</ul>{% endif %}
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% if cv.skills %}
+  <h2>{{ t.skills }}</h2>
+  <p>{% for s in cv.skills %}<bdi>{{ s }}</bdi>{{ t.sep if not loop.last }}{% endfor %}</p>
+  {% endif %}
+
+  {% if cv.certifications %}
+  <h2>{{ t.certifications }}</h2>
+  <ul>{% for c in cv.certifications %}<li>{{ c }}</li>{% endfor %}</ul>
+  {% endif %}
+
+  {% if cv.languages %}
+  <h2>{{ t.languages }}</h2>
+  <p>{% for l in cv.languages %}<bdi>{{ l.language }}{% if l.level %} ({{ l.level }}){% endif %}</bdi>{{ t.sep if not loop.last }}{% endfor %}</p>
+  {% endif %}
+
+  {% if cv.other %}
+  <h2>{{ t.other }}</h2>
+  <ul>{% for o in cv.other %}<li>{{ o }}</li>{% endfor %}</ul>
+  {% endif %}
+</body>
+</html>

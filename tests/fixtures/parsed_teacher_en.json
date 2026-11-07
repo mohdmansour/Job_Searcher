@@ -1,0 +1,75 @@
+{
+  "language": "en",
+  "contact": {
+    "name": "Sarah Thompson",
+    "email": "sarah.thompson@example.com",
+    "phone": "+44 7700 900123",
+    "location": "Manchester, United Kingdom",
+    "links": []
+  },
+  "summary": "Primary school teacher with 7 years of experience teaching Year 3 and Year 4 pupils. Careful marker of pupils' work, writer of assessment criteria, and author of termly progress reports.",
+  "experience": [
+    {
+      "title": "Primary School Teacher",
+      "employer": "Oakfield Primary School",
+      "location": "Manchester",
+      "start": "Sep 2019",
+      "end": "Present",
+      "bullets": [
+        "Marked and graded weekly maths and English work for a class of 28 pupils, identifying recurring errors.",
+        "Wrote assessment criteria (rubrics) for end-of-term writing tasks, following National Curriculum standards.",
+        "Prepared termly written progress reports for parents and the head teacher.",
+        "Helped organise the school's annual Ofsted inspection evidence folders.",
+        "Used Microsoft Excel to track pupil assessment scores across the year."
+      ]
+    },
+    {
+      "title": "Teaching Assistant",
+      "employer": "Riverside Primary School",
+      "location": "Salford",
+      "start": "Sep 2017",
+      "end": "Jul 2019",
+      "bullets": [
+        "Supported the class teacher with reading groups of 6 pupils.",
+        "Checked pupils' homework against answer sheets and reported mistakes to the teacher."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "degree": "PGCE Primary Education",
+      "institution": "University of Manchester",
+      "start": "2018",
+      "end": "2019",
+      "details": []
+    },
+    {
+      "degree": "BA (Hons) English Literature",
+      "institution": "University of Leeds",
+      "start": "2014",
+      "end": "2017",
+      "details": []
+    }
+  ],
+  "skills": [
+    "Lesson planning",
+    "marking and feedback",
+    "assessment design",
+    "report writing",
+    "Microsoft Word",
+    "Microsoft Excel",
+    "Google Classroom"
+  ],
+  "certifications": [],
+  "languages": [
+    {
+      "language": "English",
+      "level": "native"
+    },
+    {
+      "language": "French",
+      "level": "intermediate"
+    }
+  ],
+  "other": []
+}
