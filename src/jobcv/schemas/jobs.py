@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import StrEnum
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import AwareDatetime, BaseModel, Field, field_validator
 
@@ -42,10 +42,14 @@ class Country(StrEnum):
     CANADA = "Canada"
 
 
+ShortText = Annotated[str, Field(max_length=200)]
+
+
 class SearchQuery(BaseModel):
     title: str = Field(min_length=1, max_length=200)
+    more_titles: list[ShortText] = Field(default_factory=list, max_length=2)  # e.g. "Software Tester"
     country: Country
-    cities: list[str] = Field(default_factory=list, max_length=10)
+    cities: list[ShortText] = Field(default_factory=list, max_length=10)
     remote: bool = False
     max_results: int = Field(default=25, ge=1, le=200)
 
@@ -57,10 +61,17 @@ class SearchQuery(BaseModel):
             raise ValueError("title is empty")
         return v
 
-    @field_validator("cities")
+    @field_validator("cities", "more_titles")
     @classmethod
-    def _clean_cities(cls, v: list[str]) -> list[str]:
+    def _clean_list(cls, v: list[str]) -> list[str]:
         return [c.strip() for c in v if c and c.strip()]
+
+    @property
+    def titles(self) -> list[str]:
+        """Every title to search, the main one first, without repeats."""
+        seen: set[str] = set()
+        return [t for t in [self.title, *self.more_titles]
+                if not (t.casefold() in seen or seen.add(t.casefold()))]
 
 
 class Job(BaseModel):

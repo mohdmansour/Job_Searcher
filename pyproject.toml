@@ -15,6 +15,7 @@ dependencies = [
     "jinja2>=3.1.6",
     "crewai>=1.15,<1.16",
     "fastapi[standard]>=0.162.2",
+    "clerk-backend-api>=7.1.0",
 ]
 
 [dependency-groups]

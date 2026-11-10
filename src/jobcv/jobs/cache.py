@@ -13,7 +13,7 @@ Rules (SPEC "Cache"):
 - expired                             -> incremental fetch (last 24h window), merged;
                                          a full fetch only if still short of N
 - force_refresh                       -> full fetch even if fresh (billable, through the meter)
-- jobs posted more than `job_max_age_days` ago are dropped
+- jobs posted more than `job_max_age_days` ago are dropped, if that limit is set (default: off)
 - at most 2 source calls per search; never a loop
 """
 
@@ -46,7 +46,8 @@ class _NoMeter:
 
 def cache_key(q: SearchQuery) -> str:
     cities = ",".join(sorted(normalize(c) for c in q.cities))
-    return f"{normalize(q.title)}|{q.country.value}|{cities}|{int(q.remote)}"
+    titles = "+".join(sorted(normalize(t) for t in q.titles))
+    return f"{titles}|{q.country.value}|{cities}|{int(q.remote)}"
 
 
 class JobCache:
@@ -140,6 +141,8 @@ class JobSearchService:
         )
 
     def _drop_old(self, jobs: list[Job], now: datetime) -> list[Job]:
+        if self.s.job_max_age_days is None:
+            return jobs
         limit = now - timedelta(days=self.s.job_max_age_days)
         return [j for j in jobs if (j.posted_at or j.fetched_at) >= limit]
 

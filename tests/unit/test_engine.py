@@ -4,8 +4,10 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
+from fastapi.testclient import TestClient
 
 from jobcv.agents.base import LLMReply
+from jobcv.api.app import create_app
 from jobcv.config import Settings
 from jobcv.pipeline.engine import DONE, STOPPED, Engine, NotFound
 from jobcv.schemas import (
@@ -163,8 +165,11 @@ def test_user_db_and_job_cache_are_separate_files(engine, s):
 
 def test_runs_left_running_by_a_dead_process_are_marked_failed(s):
     store = UserStore(s)
-    run_id = store.add_run("search", "cv", {}, {}, "running")
-    Engine(s, source=FixtureSource(), llm=fake_llm, renderer=fake_render, synchronous=True)
+    cv_id = store.add_cv("en", "text", "raw", "{}", {})
+    run_id = store.add_run("search", cv_id, {}, {}, "running")
+    engine = Engine(s, source=FixtureSource(), llm=fake_llm, renderer=fake_render, synchronous=True)
+    with TestClient(create_app(engine, verifier=lambda request: "user_a")):  # the server starting
+        pass
     run = store.get_run(run_id)
     assert run["status"] == "failed" and run["error"] == "interrupted"
 

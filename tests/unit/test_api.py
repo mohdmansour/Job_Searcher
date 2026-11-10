@@ -17,7 +17,7 @@ def client(tmp_path):
     s = Settings(_env_file=None, data_dir=tmp_path, tessdata_dir=ROOT / "tessdata")
     engine = Engine(s, source=FixtureSource(), llm=fake_llm, renderer=fake_render,
                     synchronous=True)
-    with TestClient(create_app(engine)) as c:
+    with TestClient(create_app(engine, verifier=lambda request: "user_a")) as c:
         yield c
 
 
@@ -86,7 +86,7 @@ def test_search_runs_in_background_worker(tmp_path):
 
     s = Settings(_env_file=None, data_dir=tmp_path, tessdata_dir=ROOT / "tessdata")
     engine = Engine(s, source=FixtureSource(), llm=fake_llm, renderer=fake_render)
-    with TestClient(create_app(engine)) as c:
+    with TestClient(create_app(engine, verifier=lambda request: "user_a")) as c:
         cv_id = upload(c).json()["cv_id"]
         run_id = c.post("/search", json={"cv_id": cv_id, "title": "QA",
                                          "country": "United Arab Emirates",
@@ -97,3 +97,64 @@ def test_search_runs_in_background_worker(tmp_path):
                 break
             time.sleep(0.05)
         assert status == "done"
+
+
+# ---- pre-run estimates and CV status (used by the website) ----
+class CountingSource(FixtureSource):
+    searches = 0
+
+    def search(self, *args, **kwargs):
+        type(self).searches += 1
+        return super().search(*args, **kwargs)
+
+
+def test_search_estimate_starts_nothing(tmp_path):
+    s = Settings(_env_file=None, data_dir=tmp_path, markup=3.0)
+    calls = []
+    llm = lambda *a, **k: calls.append(1)
+    engine = Engine(s, source=CountingSource(), llm=llm, renderer=fake_render, synchronous=True)
+    with TestClient(create_app(engine, verifier=lambda request: "user_a")) as c:
+        r = c.post("/estimate/search", json={"country": "Germany", "cities": ["Berlin"],
+                                             "remote": False, "max_results": 10})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["within_cap"] is True and body["total_usd"] > 0
+    assert body["price_to_user_usd"] == pytest.approx(body["total_usd"] * 3.0)
+    assert CountingSource.searches == 0 and calls == []
+
+
+def test_search_estimate_matches_the_real_run(client):
+    cv_id = upload(client).json()["cv_id"]
+    form = {"country": "United Arab Emirates", "max_results": 5}
+    est = client.post("/estimate/search", json=form).json()
+    started = client.post("/search", json={"cv_id": cv_id, "title": "QA", **form}).json()
+    assert est["total_usd"] == pytest.approx(started["estimate"]["total_usd"])
+
+
+def test_search_estimate_rejects_unknown_country(client):
+    assert client.post("/estimate/search", json={"country": "Middle East"}).status_code == 422
+
+
+def test_tailor_estimate_grows_and_reports_the_cap(client):
+    one = client.post("/estimate/tailor", json={"n_jobs": 1}).json()
+    many = client.post("/estimate/tailor", json={"n_jobs": 20}).json()
+    assert one["within_cap"] is True and many["within_cap"] is False
+    assert many["total_usd"] == pytest.approx(one["total_usd"] * 20)
+    assert one["cap_usd"] == many["cap_usd"] == 1.0
+
+
+def test_tailor_estimate_needs_at_least_one_job(client):
+    assert client.post("/estimate/tailor", json={"n_jobs": 0}).status_code == 422
+
+
+def test_cv_status_returns_no_cv_content(client):
+    cv_id = upload(client).json()["cv_id"]
+    r = client.get(f"/cv/{cv_id}")
+    assert r.status_code == 200 and r.json() == {"cv_id": cv_id, "language": "en",
+                                                 "extraction": "text"}
+
+
+def test_cv_status_after_delete_is_404(client):
+    cv_id = upload(client).json()["cv_id"]
+    client.delete(f"/cv/{cv_id}")
+    assert client.get(f"/cv/{cv_id}").status_code == 404

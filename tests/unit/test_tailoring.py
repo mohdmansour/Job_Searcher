@@ -188,3 +188,15 @@ def test_loop_stops_after_max_attempts_with_warning(s):
     out = tailor_for_job(MASTER, RAW, QA_JOB, s, CostMeter(s), llm=llm)
     assert out.review_status == "FAIL" and out.warning and out.attempts == 3
     assert out.remaining_violations and log.count("editor") == 3
+
+
+def test_loop_removes_a_still_flagged_summary_sentence_and_clears_the_warning(s):
+    from jobcv.schemas import Violation
+
+    edit = honest().model_copy(update={"summary": "Careful tester. Unsupported claim here."})
+    flagged = Violation(adapted_text="Unsupported claim", problem="E", explanation="x", suggested_fix="remove")
+    llm, _ = scripted([edit] * 3, [ReviewResult(status="FAIL", violations=[flagged])] * 3)
+    out = tailor_for_job(MASTER, RAW, QA_JOB, s, CostMeter(s), llm=llm)
+    assert out.tailored_cv.summary == "Careful tester."
+    assert out.review_status == "PASS" and not out.warning and out.remaining_violations == []
+    assert out.attempts == 3

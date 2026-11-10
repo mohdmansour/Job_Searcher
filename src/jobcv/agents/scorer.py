@@ -1,6 +1,7 @@
 """Match Scorer agent (cheap model): CV JSON + job description -> honest 0-100 match.
 Runs once per job BEFORE any editing. No score is ever computed after tailoring."""
 
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from jobcv.agents.base import AgentOutputError, AgentSpec, LLMCall, run_agent
@@ -65,11 +66,14 @@ def score_job(cv: CV, job: Job, settings: Settings, meter: CostMeter,
 
 
 def rank_jobs(cv: CV, jobs: list[Job], settings: Settings, meter: CostMeter,
-              llm: LLMCall | None = None) -> list[RankedJob]:
+              llm: LLMCall | None = None,
+              check: Callable[[], None] = lambda: None) -> list[RankedJob]:
     """Score every job, best first. A job whose scoring failed is kept, last, with an error.
-    CostCapExceeded is not caught: the run must stop."""
+    CostCapExceeded is not caught: the run must stop. `check` runs before each job and may
+    raise to stop the run."""
     ranked = []
     for job in jobs:
+        check()
         try:
             ranked.append(RankedJob(job, score_job(cv, job, settings, meter, llm=llm)))
         except CostCapExceeded:

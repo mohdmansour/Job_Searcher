@@ -81,3 +81,15 @@ def test_job_dates_are_timezone_aware():
             remote=False, description="d", url="https://x", posted_at=None,
             fetched_at=datetime.now(UTC), language="en")
     assert j.fetched_at.tzinfo is not None
+
+
+def test_website_lists_every_backend_country():
+    """web/lib/countries.ts must stay in step with the Country enum."""
+    from pathlib import Path
+
+    from jobcv.schemas import Country
+
+    source = (Path(__file__).parents[2] / "web" / "lib" / "countries.ts").read_text(encoding="utf-8")
+    missing = [c.value for c in Country if f"value: '{c.value}'" not in source]
+    assert missing == []
+    assert source.count("{ value: ") == len(Country)

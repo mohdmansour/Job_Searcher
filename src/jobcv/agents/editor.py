@@ -23,6 +23,19 @@ RULES = """HARD RULES (breaking any one is a failure):
 4. Never rename a past job title. Bullets beneath it can be reworded. Keep employer names and dates exactly as written.
 5. If the job requires something the sources do not support, leave it out. Do not hint or imply it.
 
+GOAL: make this CV match the target job as closely as the candidate's real experience allows.
+Moving a line is not tailoring on its own. Work through the whole CV:
+- Summary: rewrite it for this role, leading with the real experience, skills and strengths the
+  job asks for.
+- Bullets: rewrite every bullet whose activity matches something the job asks for in the job's
+  own terms, with a clear action verb and the most relevant part first. Same activity, same
+  scope, same strength (rule 3).
+- Order: put the most relevant bullets and skills first; cut what doesn't help for this job.
+- Fix mistakes in everything you keep: spelling, grammar, punctuation, tense (past roles in the
+  past tense, a current role in the present), repeated words and unclear phrasing. A correction
+  must not change any fact. Skill, certification and degree names are the exception: keep them
+  exactly as written and mention a misspelled one in SUGGESTIONS.
+
 ALLOWED:
 - Reword bullets using the job's terminology ONLY when the underlying activity is genuinely the same.
 - Reorder sections and bullets by relevance to the job.
@@ -32,12 +45,22 @@ ALLOWED:
 - Skills, certifications and degrees: keep each item worded EXACTLY as in the master CV
   (you may reorder or remove items, never rename or add them).
 
+SUMMARY: write natural, complete sentences drawn from the whole CV (work history, skills,
+education). Never put dates, institution names or other copied CV fields in it. Say a degree was
+completed only if the sources say so; otherwise leave it out or write "background in <field>".
+
 LANGUAGE: write the whole CV in {cv_language} (the master CV's language), even if the job
 description is in another language. Do not translate titles, employers or dates.
 
-CHANGE LOG: for every changed, moved or rewritten item give: original (exact master text),
-adapted (your text), why_faithful (why the activity is the same and nothing was added).
-Do not include unchanged items."""
+CHANGE LOG: for every fixed, reworded or moved item give: original (exact master text),
+adapted (your text), why_faithful (why the activity is the same and nothing was added), and
+kind: "fixed" (only spelling, grammar, punctuation or tense corrected), "reworded" (wording
+changed for the job) or "moved" (same text, new position). Do not include unchanged items.
+
+SUGGESTIONS: up to 8 short, specific suggestions, in {cv_language}, for what only the candidate
+can fix: missing dates, results without numbers, unexplained abbreviations, a requirement of this
+job the sources don't show, a misspelled skill name. Never state anything as a fact the sources
+don't show: write "If you have ..., add it." Return an empty list if there is nothing useful."""
 
 PROMPT = """{rules}
 
@@ -61,6 +84,10 @@ FEEDBACK = """
 A strict fact-checker REJECTED your previous version. Fix EXACTLY these violations and change
 nothing else (keep every other part of the previous version as it is):
 {violations}
+
+Each "Fix" is a hint, not text to paste. In the summary, rewrite or remove the rejected phrase so
+every sentence still reads naturally, and never insert dates, institution names or other copied
+CV fields. In the change log, list only what you changed in this round.
 
 YOUR PREVIOUS VERSION (JSON):
 {previous}

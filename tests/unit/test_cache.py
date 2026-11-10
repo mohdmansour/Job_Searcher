@@ -104,7 +104,8 @@ def test_expired_entry_does_incremental_refresh_and_merges(settings):
     assert res.last_updated == clock.t and res.from_cache is False
 
 
-def test_jobs_older_than_30_days_are_ignored(settings):
+def test_a_configured_age_limit_ignores_older_jobs(tmp_path):
+    settings = Settings(_env_file=None, data_dir=tmp_path, job_max_age_days=30)
     src = FakeSource([[job(1, posted_days_ago=31), job(2), job(3)], [job(4)]])
     res = service(settings, src, Clock(T0)).search(Q)
     assert "linkedin:1" not in [j.id for j in res.jobs]

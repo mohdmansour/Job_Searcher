@@ -58,11 +58,16 @@ class ChangeLogEntry(BaseModel):
     original: str
     adapted: str
     why_faithful: str
+    # fixed: language corrected only; reworded: wording changed for the job; moved: same text,
+    # new place (set by code when the text is unchanged)
+    kind: Literal["fixed", "reworded", "moved"] = "reworded"
 
 
 class EditResult(BaseModel):
     tailored_cv: CV
     change_log: list[ChangeLogEntry] = Field(default_factory=list)
+    # what only the candidate can fix (missing dates, results without numbers, ...)
+    suggestions: list[str] = Field(default_factory=list)
 
 
 class Violation(BaseModel):

@@ -83,7 +83,8 @@ def render_pdf(cv: CV, out_path: Path) -> Path:
 
 def pdf_filename(job_title: str, company: str, max_len: int = 120) -> str:
     def clean(s: str) -> str:
-        s = re.sub(r'[<>:"/\\|?*\x00-\x1f]', " ", s)
+        # also # and %: the name goes into the download link
+        s = re.sub(r'[<>:"/\\|?*#%\x00-\x1f]', " ", s)
         return re.sub(r"\s+", " ", s).strip(" .")
 
     stem = f"CV - {clean(job_title)} - {clean(company)}"

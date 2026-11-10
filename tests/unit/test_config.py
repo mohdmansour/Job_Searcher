@@ -13,7 +13,7 @@ def test_defaults_match_spec(tmp_path):
     assert s.strong_model == "gpt-5.4"
     assert s.cheap_model == "gpt-5.4-mini"
     assert s.job_cache_ttl_hours == 4
-    assert s.job_max_age_days == 30
+    assert s.job_max_age_days is None
     assert s.cv_ttl_hours == 24
     assert s.max_cost_per_run_usd == 1.0
     assert s.markup == 3.0

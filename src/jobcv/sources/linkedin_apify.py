@@ -22,10 +22,11 @@ ApifyRunner = Callable[[str, dict, int, float], tuple[list[dict], float]]
 
 def build_input(q: SearchQuery, limit: int, recent_window: str | None) -> dict:
     loc = resolve_location(q)
-    n_searches = len(loc["locations"])
-    rows = max(1, -(-limit // n_searches))  # ceil: rows is PER location search
+    titles = q.titles
+    n_searches = len(titles) * len(loc["locations"])  # the Actor runs each title x location
+    rows = max(1, -(-limit // n_searches))  # ceil: rows is PER search; max_items caps the total
     run_input = {
-        "titles": [q.title],
+        "titles": titles,
         **loc,
         "rows": rows,  # never 0: 0 means "everything" for this Actor
         "companyProfile": False,  # paid add-on, not needed

@@ -138,8 +138,9 @@ def main(argv: list[str] | None = None, engine: Engine | None = None) -> int:
         return 0
 
     engine = engine or Engine(get_settings(), synchronous=True)
+    removed = engine.store.sweep()  # no server may be running to do this
     if args.cmd == "sweep":
-        print(f"removed {engine.store.sweep()} expired CV(s)")
+        print(f"removed {removed} expired CV(s)")
     elif args.cmd == "cv" and args.cv_cmd == "add":
         cv_id = engine.add_cv(args.pdf.read_bytes())
         print(f"cv_id: {cv_id}")

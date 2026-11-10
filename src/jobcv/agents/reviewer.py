@@ -37,15 +37,22 @@ D) exaggerated responsibility or seniority (e.g. "helped" -> "led", "used" -> "e
 E) reworded bullets whose meaning no longer matches the original activity
 
 NOT VIOLATIONS (the editor is allowed to do these):
+- Correcting spelling, grammar, punctuation or tense of the same statement.
 - Rewording when the underlying activity is the same, including using the job's vocabulary.
 - Reordering sections, bullets or skills; cutting or omitting content.
 - Rewriting the summary around strengths the sources show (e.g. "careful marker of pupils'
   work" -> "detail-oriented"). A different focus or emphasis is NOT a violation; only a claim
   the sources do not support is.
+- A summary that combines facts from anywhere in the sources. Work history and education count
+  as evidence, even if the original summary is worded differently or more modestly.
+A skill that is only listed supports saying the candidate has that skill. It does NOT support
+claiming experience, hands-on use or work done with it: flag those claims as D.
 E applies only when a bullet now describes a DIFFERENT activity than the original.
 Check the summary, every bullet, skills, certifications and education, field by field.
-When in doubt, flag it. Each violation: adapted_text (exact text from the adapted CV), problem
-(A-E), explanation, suggested_fix (a faithful replacement or "remove").
+When in doubt, flag it. Each violation: adapted_text (the exact words from the adapted CV, only
+the shortest phrase with the problem, no field label), problem (A-E), explanation, suggested_fix
+(a faithful replacement or "remove"; for the summary, wording that reads naturally in the
+sentence, never copied CV fields or dates).
 status = "PASS" only if there are no violations; otherwise "FAIL".
 
 SOURCES

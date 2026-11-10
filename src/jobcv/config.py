@@ -6,9 +6,10 @@ so they never appear in repr/logs.
 
 from functools import lru_cache
 from pathlib import Path
+from typing import Annotated
 
-from pydantic import AliasChoices, BaseModel, Field, SecretStr
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import AliasChoices, BaseModel, Field, SecretStr, field_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class ModelPrice(BaseModel):
@@ -28,7 +29,8 @@ DEFAULT_MODEL_PRICES = {
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_prefix="JOBCV_", env_file=".env", env_file_encoding="utf-8", extra="ignore"
+        env_prefix="JOBCV_", env_file=(".env", "web/.env.local"), env_file_encoding="utf-8",
+        extra="ignore",  # web/.env.local: the one place the Clerk keys are kept locally
     )
 
     # --- secrets ---
@@ -38,6 +40,15 @@ class Settings(BaseSettings):
     apify_token: SecretStr | None = Field(
         None, validation_alias=AliasChoices("APIFY_TOKEN", "JOBCV_APIFY_TOKEN")
     )
+
+    clerk_secret_key: SecretStr | None = Field(
+        None, validation_alias=AliasChoices("CLERK_SECRET_KEY", "JOBCV_CLERK_SECRET_KEY")
+    )
+    # optional public key: verifies tokens without calling Clerk
+    clerk_jwt_key: str | None = Field(
+        None, validation_alias=AliasChoices("CLERK_JWT_KEY", "JOBCV_CLERK_JWT_KEY")
+    )
+    allowed_origins: list[str] = ["http://localhost:3000"]  # sites allowed to use a token
 
     # --- LLM (provider is always OpenAI) ---
     strong_model: str = "gpt-5.4"  # CV Parser, CV Editor, CV Reviewer
@@ -64,7 +75,7 @@ class Settings(BaseSettings):
 
     # --- jobs cache ---
     job_cache_ttl_hours: float = 4
-    job_max_age_days: int = 30
+    job_max_age_days: int | None = None  # None shows jobs of any age
     incremental_window: str = "r86400"  # smallest date filter the Actor supports (24h)
 
     # --- cost meter ---
@@ -72,10 +83,26 @@ class Settings(BaseSettings):
     markup: float = 3.0
 
     # --- CV / privacy ---
+    max_cv_pages: int = 15  # a page limit keeps OCR from tying up the server
+    max_cv_chars: int = 40_000  # the cost cap uses a fixed size estimate, so size is capped here
     cv_ttl_hours: float = 24
     ocr_min_chars: int = 200  # below this much extracted text, fall back to OCR
     tesseract_cmd: str = "C:/Program Files/Tesseract-OCR/tesseract.exe"  # or "tesseract" on Linux
     tessdata_dir: Path = Path("tessdata")  # holds eng + ara .traineddata (tessdata_best)
+
+    # --- accounts: free allowance and limits (SPEC-accounts) ---
+    free_searches: int = 1
+    free_tailors: int = 1
+    free_max_results: int = 10
+    daily_cv_uploads: int = 3
+    daily_free_budget_usd: float = 5.0  # all free accounts together; then free use pauses
+    # Clerk user ids with no limits (the owner), comma-separated in the env var
+    unlimited_user_ids: Annotated[list[str], NoDecode] = Field(default_factory=list)
+
+    @field_validator("unlimited_user_ids", mode="before")
+    @classmethod
+    def _split_ids(cls, v):
+        return [i.strip() for i in v.split(",") if i.strip()] if isinstance(v, str) else v
 
     # --- storage ---
     data_dir: Path = Path("data")
@@ -87,6 +114,10 @@ class Settings(BaseSettings):
     @property
     def user_db(self) -> Path:
         return self.data_dir / "user.db"  # CVs, runs, scores (personal data)
+
+    @property
+    def accounts_db(self) -> Path:
+        return self.data_dir / "accounts.db"  # Clerk user ids and counters only
 
     @property
     def user_files_dir(self) -> Path:

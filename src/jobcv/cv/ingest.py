@@ -22,6 +22,13 @@ class OcrUnavailable(RuntimeError):
     pass
 
 
+class CvTooLarge(ValueError):
+    pass
+
+
+MAX_PAGE_POINTS = 2_000  # far larger than any real paper size; OCR memory grows with page area
+
+
 @dataclass
 class ExtractedText:
     text: str
@@ -128,13 +135,30 @@ def clean_ocr_latin(ocr: str, text_layer: str) -> str:
     return "\n".join(lines)
 
 
+def _check_size(pdf: bytes, s: Settings) -> int:
+    doc = _open(pdf)
+    try:
+        pages = len(doc)
+        if pages > s.max_cv_pages:
+            raise CvTooLarge(f"PDF has more than {s.max_cv_pages} pages")
+        if any(max(doc[i].get_size()) > MAX_PAGE_POINTS for i in range(pages)):
+            raise CvTooLarge("PDF page is too large")
+        return pages
+    finally:
+        doc.close()
+
+
 def extract_cv_text(pdf: bytes, s: Settings) -> ExtractedText:
+    pages = _check_size(pdf, s)
     text = pdf_text_layer(pdf)
-    pages = len(_open(pdf))
+    if len(text) > s.max_cv_chars:
+        raise CvTooLarge("PDF has too much text")
     method: Literal["text", "ocr"] = "text"
     if len(text.strip()) < s.ocr_min_chars or (
         detect_language(text) == "ar" and arabic_looks_reversed(text)
     ):
         text, method = clean_ocr_latin(ocr_pdf(pdf, s), text), "ocr"
     text = re.sub(r"[ \t]+\n", "\n", text).strip()
+    if len(text) > s.max_cv_chars:
+        raise CvTooLarge("PDF has too much text")
     return ExtractedText(text=text, language=detect_language(text), method=method, pages=pages)
