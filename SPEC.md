@@ -65,7 +65,7 @@ Build order: config → schemas → sources → jobs → cost → cv → scorer 
 **Cache (jobs only).**
 - Key: `normalize(title) + country + sorted(cities) + remote`.
 - TTL defaults to 4 hours (configurable). Results return `last_updated`.
-- Jobs whose `posted_at` is more than 30 days old are dropped.
+- Jobs of any age are shown (changed 2026-11-09 at the user's request: the 30-day limit hid real results). `JOBCV_JOB_MAX_AGE_DAYS` can set a limit.
 - `force_refresh=True` bypasses the cache and goes through the cost meter.
 - A stale cache entry triggers an **incremental refresh**: fetch with `publishedAt=r86400` (24 hours, the smallest window the Actor offers) and merge with dedupe.
 - If the cache has at least N jobs, return the first N. If it has fewer, fetch the shortfall.
