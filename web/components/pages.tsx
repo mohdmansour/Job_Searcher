@@ -2,7 +2,7 @@
 
 import { useClerk, useUser } from '@clerk/nextjs'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Check, FileText, Trash2 } from 'lucide-react'
 import { useApp } from '@/lib/app-state'
 import { FileName } from '@/components/chrome'
@@ -78,6 +78,41 @@ function AllowanceSection() {
   )
 }
 
+/** Asks before deleting. Cancel has focus first, so a stray Enter deletes nothing. */
+function ConfirmDelete({ open, onCancel, onConfirm }: { open: boolean; onCancel: () => void; onConfirm: () => void }) {
+  const { t } = useApp()
+  const ref = useRef<HTMLDialogElement>(null)
+  useEffect(() => {
+    const d = ref.current
+    if (!d) return
+    if (open && !d.open) d.showModal()
+    if (!open && d.open) d.close()
+  }, [open])
+  return (
+    <dialog
+      ref={ref}
+      onClose={onCancel}
+      aria-labelledby="delete-title"
+      aria-describedby="delete-body"
+      className="m-auto w-[calc(100%-2rem)] max-w-md rounded-xl border bg-background p-0 text-foreground shadow-xl backdrop:bg-foreground/40"
+    >
+      <div className="p-5">
+        <h2 id="delete-title" className="text-lg font-semibold">{t.account.deleteTitle}</h2>
+        <p id="delete-body" className="mt-2 text-sm leading-relaxed text-muted-foreground">{t.account.deleteBody}</p>
+      </div>
+      <div className="flex flex-col-reverse gap-2 border-t p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:flex-row sm:justify-end">
+        <Button variant="outline" size="lg" className="h-11 px-4" autoFocus onClick={onCancel}>
+          {t.common.cancel}
+        </Button>
+        <Button variant="destructive" size="lg" className="h-11 px-4" onClick={onConfirm}>
+          <Trash2 aria-hidden="true" />
+          {t.account.deleteConfirm}
+        </Button>
+      </div>
+    </dialog>
+  )
+}
+
 export function AccountView() {
   const { t, locale, setLocale, cv, deleteAllData } = useApp()
   const { user } = useUser()
@@ -85,6 +120,7 @@ export function AccountView() {
   const [deleted, setDeleted] = useState(false)
   const [deleteFailed, setDeleteFailed] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [confirming, setConfirming] = useState(false)
   const email = user?.primaryEmailAddress?.emailAddress
 
   return (
@@ -152,7 +188,16 @@ export function AccountView() {
             size="lg"
             className="mt-4 h-11 px-4"
             disabled={deleting}
-            onClick={async () => {
+            onClick={() => setConfirming(true)}
+          >
+            <Trash2 aria-hidden="true" />
+            {t.account.delete}
+          </Button>
+          <ConfirmDelete
+            open={confirming}
+            onCancel={() => setConfirming(false)}
+            onConfirm={async () => {
+              setConfirming(false)
               setDeleteFailed(false)
               setDeleting(true)
               try {
@@ -164,10 +209,7 @@ export function AccountView() {
                 setDeleting(false)
               }
             }}
-          >
-            <Trash2 aria-hidden="true" />
-            {t.account.delete}
-          </Button>
+          />
           {deleted && <p role="status" className="mt-3 text-sm">{t.account.deleted}</p>}
           {deleteFailed && <p role="alert" className="mt-3 text-sm text-destructive">{t.errors.server}</p>}
         </section>

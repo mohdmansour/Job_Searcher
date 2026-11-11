@@ -22,14 +22,14 @@ const plexArabic = IBM_Plex_Sans_Arabic({
 })
 
 export const metadata: Metadata = {
-  title: 'Candor — Tailor your CV. Keep it honest.',
+  title: 'NextRole — Tailor your CV. Keep it honest.',
   description:
     'Upload your master CV, find matching LinkedIn jobs, see your strengths and gaps, and download an honest tailored PDF for each role.',
   icons: {
     icon: [
       { url: '/icon-light-32x32.png', media: '(prefers-color-scheme: light)' },
       { url: '/icon-dark-32x32.png', media: '(prefers-color-scheme: dark)' },
-      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/icon.png', type: 'image/png', sizes: '512x512' },
     ],
     apple: '/apple-icon.png',
   },

@@ -8,7 +8,7 @@ function arCount(n: number, one: string, two: string, few: string, many: string)
 }
 
 const en = {
-  brand: 'Candor',
+  brand: 'NextRole',
   common: {
     switchTo: 'العربية',
     switchToLabel: 'Switch interface to Arabic',
@@ -16,7 +16,7 @@ const en = {
     back: 'Back',
     cancel: 'Cancel',
     getStarted: 'Get started',
-    openApp: 'Open Candor',
+    openApp: 'Open NextRole',
     signIn: 'Sign in',
     signUp: 'Create account',
     openMenu: 'Open menu',
@@ -136,7 +136,7 @@ const en = {
       },
       {
         q: 'What happens to my CV?',
-        a: 'It’s sent to OpenAI to read it, match it to jobs and create tailored versions, and it isn’t shared with employers. Your CV and tailored files are deleted automatically after 24 hours, and you can delete them sooner from your account.',
+        a: 'It’s used only to match you with jobs and create tailored versions for the jobs you choose. It’s never sold or shared with employers. Your CV and tailored files are deleted automatically after 24 hours, and you can delete them sooner from your account. Our privacy page has the details.',
       },
     ],
     finalTitle: 'Start with the CV you already have.',
@@ -312,6 +312,9 @@ const en = {
     data: 'Your data',
     dataBody: 'Delete your CV, searches and tailored PDFs from our servers now, on every device. They’re also deleted automatically after 24 hours. This can’t be undone.',
     delete: 'Delete my data',
+    deleteTitle: 'Delete your data?',
+    deleteBody: 'This deletes your CV, searches and tailored PDFs from our servers, on every device. It can’t be undone. Your free allowance stays used.',
+    deleteConfirm: 'Delete',
     deleted: 'Your CV, searches and tailored files have been deleted.',
     signOut: 'Sign out',
   },
@@ -346,14 +349,14 @@ const en = {
       },
       {
         h: 'Contact',
-        p: 'Questions about privacy can be sent to privacy@candor.example.',
+        p: 'Questions about privacy can be sent to privacy@nextrole.example.',
       },
     ],
     termsTitle: 'Terms',
     terms: [
       {
         h: 'The service',
-        p: 'Candor helps you find job postings and tailor your existing CV. It does not guarantee interviews, offers, or employment.',
+        p: 'NextRole helps you find job postings and tailor your existing CV. It does not guarantee interviews, offers, or employment.',
       },
       {
         h: 'Your content',
@@ -378,7 +381,7 @@ const en = {
 export type Dict = typeof en
 
 const ar: Dict = {
-  brand: 'Candor',
+  brand: 'NextRole',
   common: {
     switchTo: 'English',
     switchToLabel: 'تغيير لغة الواجهة إلى الإنجليزية',
@@ -386,7 +389,7 @@ const ar: Dict = {
     back: 'رجوع',
     cancel: 'إلغاء',
     getStarted: 'ابدأ الآن',
-    openApp: 'افتح Candor',
+    openApp: 'افتح NextRole',
     signIn: 'تسجيل الدخول',
     signUp: 'إنشاء حساب',
     openMenu: 'فتح القائمة',
@@ -506,7 +509,7 @@ const ar: Dict = {
       },
       {
         q: 'ماذا يحدث لسيرتي الذاتية؟',
-        a: 'تُرسل إلى OpenAI لقراءتها ومطابقتها مع الوظائف وإنشاء نسخ مخصّصة، ولا تُشارك مع أصحاب العمل. تُحذف سيرتك وملفاتك المخصّصة تلقائيًا بعد 24 ساعة، ويمكنك حذفها قبل ذلك من حسابك.',
+        a: 'تُستخدم فقط لمطابقتك مع الوظائف وإنشاء نسخ مخصّصة للوظائف التي تختارها، ولا تُباع أبدًا ولا تُشارك مع أصحاب العمل. تُحذف سيرتك وملفاتك المخصّصة تلقائيًا بعد 24 ساعة، ويمكنك حذفها قبل ذلك من حسابك. تجد التفاصيل في صفحة الخصوصية.',
       },
     ],
     finalTitle: 'ابدأ بالسيرة الذاتية الموجودة لديك.',
@@ -682,6 +685,9 @@ const ar: Dict = {
     data: 'بياناتك',
     dataBody: 'احذف سيرتك الذاتية وعمليات البحث وملفات PDF المخصّصة من خوادمنا الآن، على كل الأجهزة. تُحذف أيضًا تلقائيًا بعد 24 ساعة. لا يمكن التراجع عن ذلك.',
     delete: 'حذف بياناتي',
+    deleteTitle: 'حذف بياناتك؟',
+    deleteBody: 'سيؤدي هذا إلى حذف سيرتك الذاتية وعمليات البحث وملفات PDF المخصّصة من خوادمنا، على كل الأجهزة. لا يمكن التراجع عن ذلك، ويبقى رصيدك المجاني مستخدَمًا.',
+    deleteConfirm: 'حذف',
     deleted: 'تم حذف سيرتك الذاتية وعمليات البحث وملفاتك المخصّصة.',
     signOut: 'تسجيل الخروج',
   },
@@ -716,14 +722,14 @@ const ar: Dict = {
       },
       {
         h: 'التواصل',
-        p: 'يمكن إرسال الأسئلة المتعلقة بالخصوصية إلى privacy@candor.example.',
+        p: 'يمكن إرسال الأسئلة المتعلقة بالخصوصية إلى privacy@nextrole.example.',
       },
     ],
     termsTitle: 'الشروط',
     terms: [
       {
         h: 'الخدمة',
-        p: 'تساعدك Candor على العثور على إعلانات الوظائف وتخصيص سيرتك الذاتية الحالية. ولا تضمن المقابلات أو العروض أو التوظيف.',
+        p: 'تساعدك NextRole على العثور على إعلانات الوظائف وتخصيص سيرتك الذاتية الحالية. ولا تضمن المقابلات أو العروض أو التوظيف.',
       },
       {
         h: 'محتواك',

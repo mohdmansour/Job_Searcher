@@ -1,6 +1,7 @@
 'use client'
 
 import { useAuth, UserButton } from '@clerk/nextjs'
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
@@ -12,11 +13,9 @@ import { cn } from '@/lib/utils'
 export function Logo({ className }: { className?: string }) {
   return (
     <Link href="/" className={cn('flex items-center gap-2 font-semibold tracking-tight text-foreground', className)}>
-      <span aria-hidden="true" className="grid size-7 place-items-center rounded-md bg-foreground text-sm font-bold text-background">
-        C
-      </span>
+      <Image src="/logo-mark.png" alt="" width={32} height={32} priority className="size-8" />
       <span dir="ltr" className="text-lg max-[359px]:sr-only">
-        Candor
+        Next<span className="text-primary">Role</span>
       </span>
     </Link>
   )

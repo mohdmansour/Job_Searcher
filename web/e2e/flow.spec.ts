@@ -38,7 +38,7 @@ const session = (extra: object = {}) => ({
 async function seed(page: Page, data: object) {
   await page.addInitScript((value) => {
     if (!sessionStorage.getItem('seeded')) {
-      localStorage.setItem('candor.session.v1', value)
+      localStorage.setItem('nextrole.session.v1', value)
       sessionStorage.setItem('seeded', '1')
     }
   }, owned(data))

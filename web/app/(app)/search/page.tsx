@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { SearchForm, SearchPageHeader } from '@/components/search/search-form'
 import { requireAccount } from '@/lib/account-gate'
 
-export const metadata: Metadata = { title: 'Upload & search — Candor' }
+export const metadata: Metadata = { title: 'Upload & search — NextRole' }
 
 export default async function SearchPage() {
   await requireAccount('/search', 'sign-up')

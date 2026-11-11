@@ -1,5 +1,5 @@
 /**
- * Clerk's sign-in, sign-up and account screens in Candor's own colours and font. Values are the
+ * Clerk's sign-in, sign-up and account screens in NextRole's own colours and font. Values are the
  * site's CSS variables (app/globals.css), so the two can't drift apart.
  * Source: https://clerk.com/docs/nextjs/guides/customizing-clerk/appearance-prop/variables
  */

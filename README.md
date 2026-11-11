@@ -1,6 +1,6 @@
 # Job CV Engine
 
-An AI job search + CV tailoring product: a Python package, a FastAPI API, a CLI, and the Candor
+An AI job search + CV tailoring product: a Python package, a FastAPI API, a CLI, and the NextRole
 website in [web/](web/). Real accounts and payments don't exist yet. Requirements are in
 [SPEC.md](SPEC.md) (backend) and [SPEC-web.md](SPEC-web.md) (website), and the build plans are in
 [tasks/](tasks/).
@@ -39,7 +39,7 @@ cd web && npm install && npm run dev              # website at http://localhost:
 
 For the production build use `npm run build && npm run start -- -H localhost`. Use `localhost`, not `127.0.0.1`: Clerk's sign-in layer hangs on `127.0.0.1`.
 
-**Sign-in (Clerk):** put your Clerk development keys in `web/.env.local` as `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY`. The backend reads the secret key from the same file, so it can check every request itself. Landing, pricing, privacy and terms are public. Upload & search sends a new visitor to sign-up and back; the other app pages ask for sign-in. Our servers store only Clerk's user id, never a name or email. In the Clerk dashboard, set the application name to Candor so the sign-in screens say so.
+**Sign-in (Clerk):** put your Clerk development keys in `web/.env.local` as `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY`. The backend reads the secret key from the same file, so it can check every request itself. Landing, pricing, privacy and terms are public. Upload & search sends a new visitor to sign-up and back; the other app pages ask for sign-in. Our servers store only Clerk's user id, never a name or email. In the Clerk dashboard, set the application name to NextRole so the sign-in screens say so.
 
 The browser only talks to the website. Next.js forwards `/api/*` to the backend (`BACKEND_URL`, default `http://127.0.0.1:8000`), so the backend stays private. `BACKEND_URL` is read when the site is built or started.
 

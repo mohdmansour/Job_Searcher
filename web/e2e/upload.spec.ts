@@ -69,7 +69,7 @@ test('a reload keeps the CV', async ({ page }) => {
   await page.goto('/search')
   await page.locator(fileInput).setInputFiles(pdfFile())
   await expect(page.getByRole('button', { name: 'Replace' })).toBeVisible({ timeout: 20_000 }) // upload finished
-  await expect.poll(() => page.evaluate(() => localStorage.getItem('candor.session.v1'))).toContain('My CV.pdf')
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('nextrole.session.v1'))).toContain('My CV.pdf')
   await page.reload()
   await expect(page.getByText('My CV.pdf')).toBeVisible()
 })
@@ -77,7 +77,7 @@ test('a reload keeps the CV', async ({ page }) => {
 test('an expired CV is cleared with an explanation', async ({ page }) => {
   await mockApi(page, { 'GET /cv/cv-1': (r) => r.fulfill({ status: 404 }) })
   await page.addInitScript(
-    (v) => localStorage.setItem('candor.session.v1', v),
+    (v) => localStorage.setItem('nextrole.session.v1', v),
     owned({ cv: { id: 'cv-1', name: 'Old.pdf', sizeKb: 2, language: 'en', extraction: 'text' } }),
   )
   await page.goto('/search')

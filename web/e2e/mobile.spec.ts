@@ -26,7 +26,7 @@ const session = {
 for (const path of ['/search', '/results', '/generate', '/account', '/pricing', '/sign-in', '/']) {
   test(`controls are finger-sized on ${path}`, async ({ page }) => {
     await mockApi(page, handlers)
-    await page.addInitScript((v) => localStorage.setItem('candor.session.v1', v), owned(session))
+    await page.addInitScript((v) => localStorage.setItem('nextrole.session.v1', v), owned(session))
     await page.goto(path)
     await page.waitForTimeout(800)
     const small = await page.evaluate(() =>
@@ -41,7 +41,7 @@ for (const path of ['/search', '/results', '/generate', '/account', '/pricing', 
 
 test('the job checkbox can be tapped just outside its small box', async ({ page }) => {
   await mockApi(page, handlers)
-  await page.addInitScript((v) => localStorage.setItem('candor.session.v1', v), owned({ ...session, selected: [] }))
+  await page.addInitScript((v) => localStorage.setItem('nextrole.session.v1', v), owned({ ...session, selected: [] }))
   await page.goto('/results')
   const box = page.getByRole('checkbox')
   await expect(box).not.toBeChecked()

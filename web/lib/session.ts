@@ -35,7 +35,7 @@ export type SessionData = {
 
 type Stored = SessionData & { owner: string }
 
-const KEY = 'candor.session.v1'
+const KEY = 'nextrole.session.v1'
 
 export const emptySession: SessionData = {
   cv: null,

@@ -9,12 +9,19 @@ const CV = { id: 'cv-1', name: 'My CV.pdf', sizeKb: 2, language: 'ar', extractio
 async function seed(page: Page, value: string) {
   await page.addInitScript((value) => {
     if (!sessionStorage.getItem('seeded')) {
-      localStorage.setItem('candor.session.v1', value)
+      localStorage.setItem('nextrole.session.v1', value)
       sessionStorage.setItem('seeded', '1')
     }
   }, value)
 }
-const stored = (page: Page) => page.evaluate(() => localStorage.getItem('candor.session.v1') ?? '')
+/** Deleting asks first, in a box. */
+async function confirmDelete(page: Page) {
+  const box = page.getByRole('dialog', { name: 'Delete your data?' })
+  await expect(box).toBeVisible()
+  await box.getByRole('button', { name: 'Delete', exact: true }).click()
+}
+
+const stored = (page: Page) => page.evaluate(() => localStorage.getItem('nextrole.session.v1') ?? '')
 
 test.describe('signed out', () => {
   test.use(signedOut)
@@ -81,6 +88,7 @@ test('delete my data clears the server from any device, then this browser', asyn
   await expect(page.getByText('My CV.pdf')).toBeVisible()
   await expect(page.getByText('Detected CV language: Arabic')).toBeVisible()
   await page.getByRole('button', { name: 'Delete my data' }).click()
+  await confirmDelete(page)
   await expect(page.getByText('Your CV, searches and tailored files have been deleted.').first()).toBeVisible()
   expect(calls.map((c) => c.key)).toContain('DELETE /me/data')
   await expect.poll(() => stored(page)).not.toContain('My CV.pdf')
@@ -91,6 +99,7 @@ test('delete my data works with nothing stored in this browser (another device)'
   const calls = await mockApi(page, { 'DELETE /me/data': (r) => r.fulfill({ status: 204 }) })
   await page.goto('/account')
   await page.getByRole('button', { name: 'Delete my data' }).click()
+  await confirmDelete(page)
   await expect(page.getByRole('status')).toHaveText('Your CV, searches and tailored files have been deleted.')
   expect(calls.map((c) => c.key)).toContain('DELETE /me/data')
 })
@@ -101,6 +110,7 @@ test('if deletion fails, it says so and keeps the CV listed', async ({ page }) =
   await page.goto('/account')
   await expect(page.getByText('My CV.pdf')).toBeVisible()
   await page.getByRole('button', { name: 'Delete my data' }).click()
+  await confirmDelete(page)
   await expect(page.getByText(/Something went wrong/)).toBeVisible()
   await expect(page.getByText('My CV.pdf')).toBeVisible()
 })
@@ -127,4 +137,29 @@ test('the site makes no third-party requests', async ({ page }) => {
   await mockApi(page)
   for (const path of ['/', '/search', '/account']) await page.goto(path)
   expect(outside).toEqual([])
+})
+
+test('delete my data asks first; cancel keeps everything', async ({ page }) => {
+  const calls = await mockApi(page, { 'DELETE /me/data': (r) => r.fulfill({ status: 204 }) })
+  await seed(page, owned({ cv: CV }))
+  await page.goto('/account')
+  await page.getByRole('button', { name: 'Delete my data' }).click()
+  const box = page.getByRole('dialog', { name: 'Delete your data?' })
+  await expect(box).toContainText('can’t be undone')
+  await expect(box.getByRole('button', { name: 'Cancel' })).toBeFocused() // a stray Enter deletes nothing
+  await box.getByRole('button', { name: 'Cancel' }).click()
+  await expect(box).toBeHidden()
+  await page.getByRole('button', { name: 'Delete my data' }).click()
+  await page.keyboard.press('Escape')
+  await expect(box).toBeHidden()
+  await expect(page.getByText('My CV.pdf')).toBeVisible()
+  expect(calls.map((c) => c.key)).not.toContain('DELETE /me/data')
+})
+
+test('the delete box speaks Arabic in the Arabic interface', async ({ page, context, baseURL }) => {
+  await context.addCookies([{ name: 'locale', value: 'ar', url: baseURL! }])
+  await mockApi(page)
+  await page.goto('/account')
+  await page.getByRole('button', { name: 'حذف بياناتي' }).click()
+  await expect(page.getByRole('dialog', { name: 'حذف بياناتك؟' })).toBeVisible()
 })

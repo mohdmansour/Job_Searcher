@@ -44,7 +44,7 @@ for (const locale of ['en', 'ar'] as const) {
     test.beforeEach(async ({ page, context, baseURL }) => {
       await context.addCookies([{ name: 'locale', value: locale, url: baseURL! }])
       await mockApi(page, handlers)
-      await page.addInitScript((v) => localStorage.setItem('candor.session.v1', v), owned(JSON.parse(seed)))
+      await page.addInitScript((v) => localStorage.setItem('nextrole.session.v1', v), owned(JSON.parse(seed)))
     })
 
     for (const path of ['/search', '/results', `/results?job=${encodeURIComponent('linkedin:0')}`, '/generate', '/account']) {
