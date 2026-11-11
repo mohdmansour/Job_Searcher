@@ -73,9 +73,10 @@ class Suggestion(BaseModel):
 
     @staticmethod
     def from_any(value: "Suggestion | dict | str") -> "Suggestion":
-        """Results made before suggestions had labels stored plain text."""
+        """Results made before suggestions had labels stored plain text. Such a sentence can
+        bundle several skills, so ticking it would claim all of them: it is advice only."""
         if isinstance(value, str):
-            return Suggestion(label=value, text=value)
+            return Suggestion(label=value[:80], text=value, kind="tip")
         return Suggestion.model_validate(value)
 
 

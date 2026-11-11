@@ -177,5 +177,18 @@ def test_redo_input_is_limited(client, confirmed):
     assert r.status_code == 422
 
 
-def test_old_plain_text_suggestions_still_read():
-    assert Suggestion.from_any("Add the dates.") == Suggestion(label="Add the dates.", text="Add the dates.")
+def test_old_plain_text_suggestions_read_as_advice_that_cant_be_ticked():
+    # they could bundle several skills in one sentence: ticking would claim all of them
+    old = "If you have experience with firewall management, VLANs, VPNs, IAM, CI/CD security, SIEM, Python, or Bash, add it with examples and dates."
+    s = Suggestion.from_any(old)
+    assert s.kind == "tip" and s.text == old
+
+
+def test_a_result_made_before_labels_offers_no_ticking(client):
+    tailor_id, _ = http_tailored(client)
+    engine = client.app.state.engine
+    run = engine.store.get_run(tailor_id, owner="user_u")
+    run["result"][0]["suggestions"] = ["If you have experience with VLANs or Bash, add it."]
+    engine.store.update_run(tailor_id, status=run["status"], result=run["result"])
+    result = client.get(f"/tailor/{tailor_id}", headers=U).json()["results"][0]
+    assert result["suggestions"][0]["kind"] == "tip"
