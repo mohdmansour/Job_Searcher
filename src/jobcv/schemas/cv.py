@@ -1,8 +1,8 @@
 """Structured CV and the input/output contracts of the four LLM steps."""
 
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, BeforeValidator, Field
 
 
 class Contact(BaseModel):
@@ -63,11 +63,33 @@ class ChangeLogEntry(BaseModel):
     kind: Literal["fixed", "reworded", "moved"] = "reworded"
 
 
+class Suggestion(BaseModel):
+    """One thing only the candidate can confirm. "add": they can tick it and the CV is made again
+    with it; "tip": advice about the master CV itself (e.g. a typo in a skill name)."""
+
+    label: str  # the thing itself, e.g. "Python" or "Completed the Bachelor of Cyber Security"
+    text: str  # the full suggestion, e.g. "If you use Python at work, add it with examples."
+    kind: Literal["add", "tip"] = "add"
+
+    @staticmethod
+    def from_any(value: "Suggestion | dict | str") -> "Suggestion":
+        """Results made before suggestions had labels stored plain text."""
+        if isinstance(value, str):
+            return Suggestion(label=value, text=value)
+        return Suggestion.model_validate(value)
+
+
+Suggestions = Annotated[
+    list[Suggestion],
+    BeforeValidator(lambda items: [Suggestion.from_any(i) for i in items or []]),
+]
+
+
 class EditResult(BaseModel):
     tailored_cv: CV
     change_log: list[ChangeLogEntry] = Field(default_factory=list)
-    # what only the candidate can fix (missing dates, results without numbers, ...)
-    suggestions: list[str] = Field(default_factory=list)
+    # what only the candidate can add or fix (missing dates, results without numbers, ...)
+    suggestions: Suggestions = Field(default_factory=list)
 
 
 class Violation(BaseModel):

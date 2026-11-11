@@ -7,6 +7,7 @@ import { ApiError, isConnectionProblem, pdfHref, refreshSession, type ApiErrorCo
 import { useApp } from '@/lib/app-state'
 import type { ItemStatus, TailorItem } from '@/lib/tailor-state'
 import { Button, buttonVariants } from '@/components/ui/button'
+import { SuggestionsPanel } from './suggestions-panel'
 import { cn } from '@/lib/utils'
 
 /** Which of the three stages (waiting, working, ready) each status has reached. */
@@ -117,6 +118,11 @@ function GenCard({ item }: { item: TailorItem }) {
           <p className="text-sm text-muted-foreground [overflow-wrap:anywhere]">
             <bdi>{job.company}</bdi>
           </p>
+          {item.redo && (
+            <span className="mt-1 inline-flex rounded-full bg-accent px-2 py-0.5 text-xs font-medium text-accent-foreground">
+              {t.generate.newVersion}
+            </span>
+          )}
         </div>
         {result && (
           <a href={pdfHref(result.pdf_url)} download onClick={downloadPdf} className={cn(buttonVariants({ size: 'lg' }), 'h-11 shrink-0 px-4')}>
@@ -176,12 +182,12 @@ function GenCard({ item }: { item: TailorItem }) {
         </p>
       )}
 
-      {result && <ResultDetails result={result} />}
+      {result && <ResultDetails item={item} result={result} />}
     </li>
   )
 }
 
-function ResultDetails({ result }: { result: TailoredJob }) {
+function ResultDetails({ item, result }: { item: TailorItem; result: TailoredJob }) {
   const { t, cv } = useApp()
   // A line that only moved has nothing to compare: list it once instead of before-and-after.
   const edits = result.change_log.filter((c) => c.kind !== 'moved')
@@ -257,15 +263,7 @@ function ResultDetails({ result }: { result: TailoredJob }) {
       </div>
 
       {suggestions.length > 0 && (
-        <div className="mt-5 rounded-lg border bg-muted/40 p-4" data-testid="suggestions">
-          <h3 className="text-sm font-semibold">{t.generate.suggestionsTitle}</h3>
-          <p className="mt-1 text-xs text-muted-foreground">{t.generate.suggestionsBody}</p>
-          <ul className="mt-3 flex list-disc flex-col gap-1.5 ps-5 text-sm">
-            {suggestions.map((s) => (
-              <li key={s} dir="auto" className="[overflow-wrap:anywhere]">{s}</li>
-            ))}
-          </ul>
-        </div>
+        <SuggestionsPanel item={item} suggestions={suggestions} redoAvailable={result.redo_available ?? false} />
       )}
     </>
   )

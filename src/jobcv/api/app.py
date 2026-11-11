@@ -21,7 +21,15 @@ from jobcv.config import get_settings
 from jobcv.cost.meter import CostCapExceeded, CostRecord, Estimate
 from jobcv.cv.ingest import CvTooLarge, OcrUnavailable
 from jobcv.pipeline.engine import Engine, NotFound
-from jobcv.schemas import ChangeLogEntry, Country, Job, MatchResult, SearchQuery, Violation
+from jobcv.schemas import (
+    ChangeLogEntry,
+    Country,
+    Job,
+    MatchResult,
+    SearchQuery,
+    Suggestions,
+    Violation,
+)
 from jobcv.schemas.jobs import ShortText
 
 log = logging.getLogger(__name__)
@@ -111,7 +119,18 @@ class TailoredJobOut(BaseModel):
     warning: bool
     remaining_violations: list[Violation]
     change_log: list[ChangeLogEntry]
-    suggestions: list[str] = Field(default_factory=list)
+    suggestions: Suggestions = Field(default_factory=list)
+    redo_available: bool = False  # can this CV be made again with ticked suggestions, for free
+
+
+class ConfirmedItem(BaseModel):
+    label: str = Field(min_length=1, max_length=120)
+    details: str = Field(default="", max_length=500)
+
+
+class RedoRequest(BaseModel):
+    job_id: str
+    confirmed: list[ConfirmedItem] = Field(min_length=1, max_length=8)
 
 
 class TailorRunOut(BaseModel):
@@ -264,17 +283,38 @@ def create_app(engine: Engine | None = None, verifier: Verifier | None = None) -
     def get_tailor(engine: EngineDep, user: CurrentUser, tailor_id: str,
                    request: Request) -> TailorRunOut:
         run = engine.get_tailor(tailor_id, user.id)
+        unlimited = engine.accounts.unlimited(user.id)
+        is_redo = bool((run["request"] or {}).get("redo_of"))
+
+        def redo_ok(job_id: str) -> bool:
+            if unlimited:
+                return True
+            return not is_redo and not engine.accounts.redo_used(tailor_id, job_id)
+
         results = [
             TailoredJobOut(
                 **{k: r[k] for k in ("job_id", "review_status", "attempts", "warning",
                                      "remaining_violations", "change_log")},
                 suggestions=r.get("suggestions", []),  # runs made before suggestions existed
+                redo_available=redo_ok(r["job_id"]),
                 pdf_url=str(request.url_for("download_pdf", tailor_id=tailor_id, name=r["pdf"])),
             )
             for r in run["result"] or []
         ]
         return TailorRunOut(tailor_id=tailor_id, status=run["status"], estimate=run["estimate"],
                             results=results, cost=run["cost"], error=run["error"])
+
+    @app.post("/tailor/{tailor_id}/redo", status_code=202)
+    def redo_tailor(engine: EngineDep, user: CurrentUser, tailor_id: str,
+                    req: RedoRequest) -> RunStarted:
+        """Make one tailored CV again with the suggestions the user ticked (details optional)."""
+        confirmed = [(c.label.strip(), c.details.strip()) for c in req.confirmed]
+        try:
+            run_id, est = engine.start_redo(tailor_id, req.job_id, confirmed, owner=user.id)
+        except ValueError as e:
+            raise HTTPException(400, str(e)) from e
+        return RunStarted(run_id=run_id, status=engine.get_tailor(run_id, user.id)["status"],
+                          estimate=est)
 
     @app.get("/files/{tailor_id}/{name}", name="download_pdf")
     def download_pdf(engine: EngineDep, user: CurrentUser, tailor_id: str,

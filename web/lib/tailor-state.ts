@@ -2,13 +2,15 @@ import type { ApiErrorCode, TailoredJob, TailorRun } from './api'
 
 export type TailorJobRef = { id: string; title: string; company: string }
 /** One POST /tailor. `searchRunId` is kept so a job can be retried later. */
-export type TailorBatch = { id: string; searchRunId: string; jobs: TailorJobRef[] }
+/** `redo`: a CV made again with ticked suggestions; it sits next to the version it improves. */
+export type TailorBatch = { id: string; searchRunId: string; jobs: TailorJobRef[]; redo?: boolean }
 
 export type ItemStatus = 'waiting' | 'working' | 'done' | 'failed' | 'stopped' | 'expired' | 'error'
 
 export type TailorItem = {
   job: TailorJobRef
   batchId: string
+  redo?: boolean
   status: ItemStatus
   result?: TailoredJob
   errorCode?: ApiErrorCode
@@ -25,7 +27,7 @@ export function tailorItems(
     const error = errors[batch.id]
     let workingAssigned = false
     return batch.jobs.map((job): TailorItem => {
-      const base = { job, batchId: batch.id }
+      const base = { job, batchId: batch.id, redo: batch.redo }
       const result = run?.results.find((r) => r.job_id === job.id)
       if (error === 'expired') return { ...base, status: 'expired' }
       if (result) return { ...base, status: 'done', result }

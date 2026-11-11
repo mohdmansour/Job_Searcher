@@ -20,11 +20,13 @@ Kind = Literal["search", "tailor", "upload"]
 SCHEMA = """
 create table if not exists usage (
   user_id text primary key, searches integer not null default 0,
-  tailors integer not null default 0);
+  tailors integer not null default 0, bonus_searches integer not null default 0,
+  bonus_tailors integer not null default 0);
 create table if not exists uploads (
   user_id text, day text, n integer not null default 0, primary key (user_id, day));
 create table if not exists spending (day text primary key, usd real not null default 0);
 create table if not exists active (user_id text primary key);
+create table if not exists redos (tailor_id text, job_id text, primary key (tailor_id, job_id));
 """
 
 
@@ -53,6 +55,10 @@ class Accounts:
         settings.data_dir.mkdir(parents=True, exist_ok=True)
         with self._db() as db:
             db.executescript(SCHEMA)
+            columns = {row[1] for row in db.execute("pragma table_info(usage)")}
+            for col in ("bonus_searches", "bonus_tailors"):  # databases from before grants
+                if col not in columns:
+                    db.execute(f"alter table usage add column {col} integer not null default 0")
 
     def _db(self) -> sqlite3.Connection:
         return sqlite3.connect(self.s.accounts_db, timeout=30)
@@ -81,7 +87,7 @@ class Accounts:
                 col = "searches" if kind == "search" else "tailors"
                 db.execute("insert or ignore into usage (user_id) values (?)", (owner,))
                 if not db.execute(f"update usage set {col} = {col} + ? where user_id = ?"
-                                  f" and {col} + ? <= ?",
+                                  f" and {col} + ? <= ? + bonus_{col}",
                                   (n, owner, n, self._limit(kind))).rowcount:
                     raise Refused(403, "allowance_used")
                 try:
@@ -112,6 +118,34 @@ class Accounts:
             db.execute("update spending set usd = max(usd + ?, 0) where day = ?",
                        (delta, claim.day))
 
+    def grant(self, owner: str, searches: int = 0, tailors: int = 0) -> None:
+        """The owner gives one account extra free uses, on top of the normal allowance."""
+        if searches < 0 or tailors < 0:
+            raise ValueError("a grant adds uses; it can't take them away")
+        with self._db() as db:
+            db.execute("insert or ignore into usage (user_id) values (?)", (owner,))
+            db.execute("update usage set bonus_searches = bonus_searches + ?,"
+                       " bonus_tailors = bonus_tailors + ? where user_id = ?",
+                       (searches, tailors, owner))
+
+    def claim_redo(self, tailor_id: str, job_id: str) -> None:
+        """The one free redo of a tailored CV, taken atomically: a second claim is refused."""
+        try:
+            with self._db() as db:
+                db.execute("insert into redos (tailor_id, job_id) values (?, ?)", (tailor_id, job_id))
+        except sqlite3.IntegrityError:
+            raise Refused(403, "redo_used") from None
+
+    def release_redo(self, tailor_id: str, job_id: str) -> None:
+        """A redo that produced no CV is given back."""
+        with self._db() as db:
+            db.execute("delete from redos where tailor_id = ? and job_id = ?", (tailor_id, job_id))
+
+    def redo_used(self, tailor_id: str, job_id: str) -> bool:
+        with self._db() as db:
+            return db.execute("select 1 from redos where tailor_id = ? and job_id = ?",
+                              (tailor_id, job_id)).fetchone() is not None
+
     def clear_active(self) -> None:
         """At server start: runs of a server that stopped can never finish."""
         with self._db() as db:
@@ -119,9 +153,9 @@ class Accounts:
 
     def status(self, owner: str) -> dict:
         with self._db() as db:
-            row = db.execute("select searches, tailors from usage where user_id = ?",
-                             (owner,)).fetchone() or (0, 0)
-        return {"free_searches_left": max(self.s.free_searches - row[0], 0),
-                "free_tailors_left": max(self.s.free_tailors - row[1], 0),
+            row = db.execute("select searches, tailors, bonus_searches, bonus_tailors from usage"
+                             " where user_id = ?", (owner,)).fetchone() or (0, 0, 0, 0)
+        return {"free_searches_left": max(self.s.free_searches + row[2] - row[0], 0),
+                "free_tailors_left": max(self.s.free_tailors + row[3] - row[1], 0),
                 "unlimited": self.unlimited(owner),
                 "free_max_results": self.s.free_max_results}

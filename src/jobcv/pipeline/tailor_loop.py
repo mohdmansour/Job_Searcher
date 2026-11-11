@@ -16,7 +16,7 @@ from jobcv.agents.editor import edit_cv
 from jobcv.agents.reviewer import _cv_text, _squash, review_cv
 from jobcv.config import Settings
 from jobcv.cost.meter import CostMeter
-from jobcv.schemas import CV, ChangeLogEntry, Job, Violation
+from jobcv.schemas import CV, ChangeLogEntry, Job, Suggestion, Suggestions, Violation
 
 log = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ class TailorOutcome(BaseModel):
     attempts: int
     warning: bool
     remaining_violations: list[Violation] = Field(default_factory=list)
-    suggestions: list[str] = Field(default_factory=list)
+    suggestions: Suggestions = Field(default_factory=list)
 
 
 def label_moves(change_log: list[ChangeLogEntry]) -> list[ChangeLogEntry]:
@@ -47,13 +47,19 @@ def label_moves(change_log: list[ChangeLogEntry]) -> list[ChangeLogEntry]:
     return [e.model_copy(update={"kind": kind(e)}) for e in change_log]
 
 
-def clean_suggestions(items: list[str]) -> list[str]:
+MAX_LABEL_CHARS = 80
+
+
+def clean_suggestions(items: list[Suggestion]) -> list[Suggestion]:
     """Model output: trimmed, without blanks or repeats, short, and at most MAX_SUGGESTIONS."""
-    out: list[str] = []
+    out: list[Suggestion] = []
+    seen: set[str] = set()
     for item in items:
-        text = " ".join(item.split())[:MAX_SUGGESTION_CHARS]
-        if text and text not in out:
-            out.append(text)
+        text = " ".join(item.text.split())[:MAX_SUGGESTION_CHARS]
+        label = " ".join(item.label.split())[:MAX_LABEL_CHARS] or text[:MAX_LABEL_CHARS]
+        if text and label.casefold() not in seen:
+            seen.add(label.casefold())
+            out.append(Suggestion(label=label, text=text, kind=item.kind))
     return out[:MAX_SUGGESTIONS]
 
 
@@ -130,7 +136,7 @@ def tailor_for_job(
     feedback: list[Violation] | None = None
     previous: CV | None = None
     change_log: list[ChangeLogEntry] = []
-    suggestions: list[str] = []  # a fix round may return none: keep the earlier ones
+    suggestions: list[Suggestion] = []  # a fix round may return none: keep the earlier ones
     master_text = _squash(raw_text) + _squash(" ".join(_cv_text(master)))
     for attempt in range(1, settings.max_review_attempts + 1):
         check()

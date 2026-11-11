@@ -8,6 +8,8 @@ from jobcv.schemas.cv import (
     LanguageSkill,
     MatchResult,
     ReviewResult,
+    Suggestion,
+    Suggestions,
     Violation,
 )
 from jobcv.schemas.jobs import Country, Job, SearchQuery, SearchResult
@@ -27,6 +29,8 @@ __all__ = [
     "ReviewResult",
     "SearchQuery",
     "SearchResult",
+    "Suggestion",
+    "Suggestions",
     "Usage",
     "Violation",
 ]

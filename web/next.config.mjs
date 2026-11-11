@@ -8,7 +8,7 @@ const CLERK_HOST = process.env.CLERK_FRONTEND_HOST ?? 'https://*.clerk.accounts.
 const BACKEND_URL = process.env.BACKEND_URL ?? 'http://127.0.0.1:8000'
 
 // Only what the site uses. Everything else on the backend (such as /docs) stays private.
-const API_ROUTES = ['/me', '/me/data', '/cv', '/cv/:id', '/estimate/search', '/estimate/tailor', '/search', '/runs/:id', '/tailor', '/tailor/:id', '/files/:tailorId/:name']
+const API_ROUTES = ['/me', '/me/data', '/cv', '/cv/:id', '/estimate/search', '/estimate/tailor', '/search', '/runs/:id', '/tailor', '/tailor/:id', '/tailor/:id/redo', '/files/:tailorId/:name']
 
 const SECURITY_HEADERS = [
   { key: 'X-Frame-Options', value: 'DENY' },

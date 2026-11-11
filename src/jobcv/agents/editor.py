@@ -57,10 +57,16 @@ adapted (your text), why_faithful (why the activity is the same and nothing was 
 kind: "fixed" (only spelling, grammar, punctuation or tense corrected), "reworded" (wording
 changed for the job) or "moved" (same text, new position). Do not include unchanged items.
 
-SUGGESTIONS: up to 8 short, specific suggestions, in {cv_language}, for what only the candidate
-can fix: missing dates, results without numbers, unexplained abbreviations, a requirement of this
-job the sources don't show, a misspelled skill name. Never state anything as a fact the sources
-don't show: write "If you have ..., add it." Return an empty list if there is nothing useful."""
+SUGGESTIONS: up to 8, in {cv_language}, for what only the candidate can add or fix. Each one is
+about ONE thing (never a list of several skills in one suggestion) and has:
+- label: that one thing in 1-6 words, e.g. "Python", "VLANs", "Completed the Bachelor of Cyber
+  Security", "Measurable results for the internship";
+- text: the full suggestion, e.g. "If you use Python, add it with examples and dates." Never state
+  anything as a fact the sources don't show;
+- kind: "add" if the candidate could confirm it and it could then go on the CV (a skill, tool,
+  finished degree, result, date); "tip" for advice about the master CV itself, such as a misspelled
+  skill name.
+Prefer what this job asks for. Return an empty list if there is nothing useful."""
 
 PROMPT = """{rules}
 

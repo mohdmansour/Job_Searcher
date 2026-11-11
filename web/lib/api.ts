@@ -55,6 +55,10 @@ export type SearchRun = {
 
 export type Violation = { adapted_text: string; problem: string; explanation: string; suggested_fix: string }
 /** fixed: language corrected only; reworded: changed for the job; moved: same text, new place. */
+/** "add": the user can tick it and regenerate; "tip": advice about the master CV. */
+export type Suggestion = { label: string; text: string; kind: 'add' | 'tip' }
+export type ConfirmedItem = { label: string; details: string }
+
 export type ChangeKind = 'fixed' | 'reworded' | 'moved'
 export type ChangeLogEntry = { original: string; adapted: string; why_faithful: string; kind?: ChangeKind }
 export type TailoredJob = {
@@ -65,7 +69,8 @@ export type TailoredJob = {
   warning: boolean
   remaining_violations: Violation[]
   change_log: ChangeLogEntry[]
-  suggestions?: string[] // what only the user can add, such as missing dates
+  suggestions?: Suggestion[] // what only the user can add, such as missing dates
+  redo_available?: boolean // can be made again for free with ticked suggestions
 }
 export type TailorRun = {
   tailor_id: string
@@ -91,6 +96,7 @@ export type ApiErrorCode =
   | 'free_limit' // 403: more than a free account may ask for
   | 'rate_limited' // 429: one run at a time, or too many uploads today
   | 'daily_budget' // 429: free use is paused for the rest of the day
+  | 'redo_used' // 403: this tailored CV was already regenerated for free
   | 'server' // anything else
   | 'network' // no response at all
 
@@ -130,7 +136,7 @@ async function authHeaders(): Promise<Record<string, string>> {
   }
 }
 
-const LIMIT_CODES: readonly ApiErrorCode[] = ['allowance_used', 'free_limit', 'rate_limited', 'daily_budget']
+const LIMIT_CODES: readonly ApiErrorCode[] = ['allowance_used', 'free_limit', 'rate_limited', 'daily_budget', 'redo_used']
 
 /** 403 and 429 say which limit was reached: `{"detail": {"code": ...}}`. */
 function limitCode(body: unknown): ApiErrorCode | null {
@@ -199,6 +205,8 @@ export const api = {
   getRun: (runId: string) => request<SearchRun>(`/runs/${id(runId)}`),
   startTailor: (req: TailorRequest) => post<RunStarted>('/tailor', req),
   getTailor: (tailorId: string) => request<TailorRun>(`/tailor/${id(tailorId)}`),
+  redoTailor: (tailorId: string, jobId: string, confirmed: ConfirmedItem[]) =>
+    post<RunStarted>(`/tailor/${id(tailorId)}/redo`, { job_id: jobId, confirmed }),
 }
 
 /** The backend returns an absolute address; the browser must use the website's proxy. */

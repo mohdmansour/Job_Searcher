@@ -403,7 +403,7 @@ test.describe('tailoring', () => {
         { original: 'Conducted manual testing', adapted: 'Performed manual functional testing', why_faithful: 'Same activity', kind: 'reworded' },
         { original: 'MOVED-LINE stays as written', adapted: 'MOVED-LINE stays as written', why_faithful: 'Moved up', kind: 'moved' },
       ],
-      suggestions: ['If you have a result in numbers, add it.'],
+      suggestions: [{ label: 'Results in numbers', text: 'If you have a result in numbers, add it.', kind: 'add' }],
     }
     await mockApi(page, run({ 'GET /tailor/tailor-1': (r) => json(r, tailorRun('done', [result])) }))
     await seed(page, session({ batches: [{ ...batch, jobs: [batch.jobs[0]] }] }))
@@ -424,6 +424,78 @@ test.describe('tailoring', () => {
     await page.goto('/generate')
     await expect(page.getByTestId('changes')).toContainText('Delivered math lessons')
     await expect(page.getByTestId('suggestions')).toHaveCount(0)
+  })
+
+  test.describe('regenerating with suggestions', () => {
+    const SUGGESTED = {
+      ...PASSED,
+      redo_available: true,
+      suggestions: [
+        { label: 'Python', text: 'If you use Python, add it with examples.', kind: 'add' },
+        { label: 'VLANs', text: 'If you have set up VLANs, add it.', kind: 'add' },
+        { label: 'Skill spelling', text: 'If "and communications" is a typo, fix it in your CV.', kind: 'tip' },
+      ],
+    }
+    const open = async (page: Page, result: object, more: Handlers = {}) => {
+      const calls = await mockApi(page, run({ 'GET /tailor/tailor-1': (r) => json(r, tailorRun('done', [result])), ...more }))
+      await seed(page, session({ batches: [{ ...batch, jobs: [batch.jobs[0]] }] }))
+      await page.goto('/generate')
+      return calls
+    }
+
+    test('tick suggestions, add details, and regenerate that CV', async ({ page }) => {
+      const calls = await open(page, SUGGESTED, {
+        'POST /tailor/tailor-1/redo': (r) => json(r, { run_id: 'tailor-2', status: 'queued', estimate: ESTIMATE }, 202),
+        'GET /tailor/tailor-2': (r) => json(r, tailorRun('running', [])),
+      })
+      const panel = page.getByTestId('suggestions')
+      await expect(panel.getByRole('button', { name: /Regenerate/ })).toHaveCount(0) // nothing ticked yet
+      await panel.getByRole('checkbox', { name: /Python/ }).click()
+      await panel.getByLabel('Details for Python (optional)').fill('SECRET-DETAIL 2 years at Acme')
+      await panel.getByRole('checkbox', { name: /VLANs/ }).click()
+      await expect(panel.getByText('Only tick what’s true: it will appear on your CV.')).toBeVisible()
+      await panel.getByRole('button', { name: 'Regenerate with 2 selected' }).click()
+      await expect(panel.getByRole('status')).toHaveText(/Regenerating/)
+      await expect(page.getByText('New version', { exact: true })).toBeVisible() // listed next to the earlier one,
+      await expect(page.getByRole('link', { name: 'Download PDF' })).toHaveCount(1) // which keeps its PDF
+      expect(JSON.parse(calls.find((c) => c.key === 'POST /tailor/tailor-1/redo')!.body!)).toEqual({
+        job_id: 'linkedin:1',
+        confirmed: [{ label: 'Python', details: 'SECRET-DETAIL 2 years at Acme' }, { label: 'VLANs', details: '' }],
+      })
+      expect(await page.evaluate(() => JSON.stringify(localStorage))).not.toContain('SECRET-DETAIL')
+    })
+
+    test('a tip has no tick box', async ({ page }) => {
+      await open(page, SUGGESTED)
+      const panel = page.getByTestId('suggestions')
+      await expect(panel.getByText(/and communications/)).toBeVisible()
+      await expect(panel.getByRole('checkbox')).toHaveCount(2)
+    })
+
+    test('with the free regeneration used, suggestions are listed without tick boxes', async ({ page }) => {
+      await open(page, { ...SUGGESTED, redo_available: false })
+      const panel = page.getByTestId('suggestions')
+      await expect(panel.getByText('If you use Python, add it with examples.')).toBeVisible()
+      await expect(panel.getByRole('checkbox')).toHaveCount(0)
+    })
+
+    test('a refused regeneration says why', async ({ page }) => {
+      await open(page, SUGGESTED, {
+        'POST /tailor/tailor-1/redo': (r) => json(r, { detail: { code: 'redo_used' } }, 403),
+      })
+      const panel = page.getByTestId('suggestions')
+      await panel.getByRole('checkbox', { name: /Python/ }).click()
+      await panel.getByRole('button', { name: 'Regenerate with 1 selected' }).click()
+      await expect(panel.getByRole('alert')).toHaveText('This CV has already been regenerated once for free.')
+    })
+
+    test('works in Arabic', async ({ page, context, baseURL }) => {
+      await context.addCookies([{ name: 'locale', value: 'ar', url: baseURL! }])
+      await open(page, SUGGESTED)
+      const panel = page.getByTestId('suggestions')
+      await panel.getByRole('checkbox', { name: /Python/ }).click()
+      await expect(panel.getByRole('button', { name: 'أعد الإنشاء بما حدّدته (1)' })).toBeVisible()
+    })
   })
 
   test('warning: lists remaining problems and still offers the PDF', async ({ page }) => {

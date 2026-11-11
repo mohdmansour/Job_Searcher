@@ -3,7 +3,7 @@
 import { useAuth, useClerk } from '@clerk/nextjs'
 import { usePathname, useRouter } from 'next/navigation'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { api, ApiError, connectAuth, isFinished, poll, type ApiErrorCode, type Me, type SearchRun, type TailorRun } from './api'
+import { api, ApiError, connectAuth, isFinished, poll, type ApiErrorCode, type ConfirmedItem, type Me, type SearchRun, type TailorRun } from './api'
 import { dictionaries, type Dict, type Locale } from './i18n'
 import { clearSession, emptySession, loadSession, saveSession, type CvFile, type SearchParams } from './session'
 import { tailorItems, type TailorBatch, type TailorItem } from './tailor-state'
@@ -36,6 +36,7 @@ type AppState = {
   items: TailorItem[]
   startTailor: (jobIds: string[], extraInfo: string) => Promise<void>
   retryJob: (item: TailorItem) => Promise<void>
+  redoJob: (item: TailorItem, confirmed: ConfirmedItem[]) => Promise<void>
   // ---- real: the free allowance (null until known) ----
   allowance: Me | null
   refreshAllowance: () => void
@@ -245,6 +246,18 @@ export function AppStateProvider({ initialLocale, children }: { initialLocale: L
     [batches, addBatch],
   )
 
+  /** The same job again, with the suggestions the user confirmed. */
+  const redoJob = useCallback(
+    async (item: TailorItem, confirmed: ConfirmedItem[]) => {
+      const batch = batches.find((b) => b.id === item.batchId)
+      if (!batch) return
+      const started = await api.redoTailor(item.batchId, item.job.id, confirmed)
+      // kept next to the earlier version, which stays downloadable while the new one is made
+      setBatches((all) => [...all, { id: started.run_id, searchRunId: batch.searchRunId, jobs: [item.job], redo: true }])
+    },
+    [batches],
+  )
+
   const batchKey = batches.map((b) => b.id).join(',')
   useEffect(() => {
     if (!batchKey) return
@@ -312,10 +325,11 @@ export function AppStateProvider({ initialLocale, children }: { initialLocale: L
       items,
       startTailor,
       retryJob,
+      redoJob,
       allowance,
       refreshAllowance,
     }),
-    [locale, setLocale, hydrated, cv, cvExpired, setCv, removeCv, deleteAllData, cvBusy, search, run, runId, runError, startSearch, selected, toggleSelected, clearSelected, items, startTailor, retryJob, allowance, refreshAllowance],
+    [locale, setLocale, hydrated, cv, cvExpired, setCv, removeCv, deleteAllData, cvBusy, search, run, runId, runError, startSearch, selected, toggleSelected, clearSelected, items, startTailor, retryJob, redoJob, allowance, refreshAllowance],
   )
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

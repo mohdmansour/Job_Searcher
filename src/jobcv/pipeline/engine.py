@@ -45,6 +45,16 @@ class CvDeleted(Exception):
     """The CV was deleted while its run was working. Nothing more may be done with it."""
 
 
+MAX_CONFIRMED = 8
+
+
+def confirmed_facts(confirmed: list[tuple[str, str]]) -> str:
+    """What the user ticked, as extra information the editor may use as a source."""
+    lines = [f"- {label}: {details}" if details else f"- {label}" for label, details in confirmed]
+    return ("The candidate confirms these are true about themself (they ticked them in the "
+            "suggestions, with any details they added):\n" + "\n".join(lines))
+
+
 def _free_name(name: str, taken: set[str]) -> str:
     """Two jobs can share a title and company; each still needs its own PDF."""
     stem, n = name.removesuffix(".pdf"), 1
@@ -189,6 +199,32 @@ class Engine:
     # ---------------- tailor ----------------
     def start_tailor(self, search_run_id: str, job_ids: list[str], extra_info: str = "",
                      owner: str = LOCAL_OWNER):
+        return self._start_tailoring(search_run_id, job_ids, extra_info, owner)
+
+    def start_redo(self, tailor_id: str, job_id: str, confirmed: list[tuple[str, str]],
+                   owner: str = LOCAL_OWNER):
+        """Make one tailored CV again with suggestions the user confirmed. Free accounts get one
+        redo per tailored CV, not counted in the allowance; a redo's own result is final."""
+        tailor = self.get_tailor(tailor_id, owner)
+        if job_id not in {r["job_id"] for r in tailor["result"] or []}:
+            raise ValueError("this run didn't produce a CV for that job")
+        if not confirmed or len(confirmed) > MAX_CONFIRMED:
+            raise ValueError(f"choose between 1 and {MAX_CONFIRMED} suggestions")
+        free = not self.accounts.unlimited(owner)
+        if free:
+            if (tailor["request"] or {}).get("redo_of"):
+                raise Refused(403, "redo_used")
+            self.accounts.claim_redo(tailor_id, job_id)
+        try:
+            return self._start_tailoring(tailor["parent_id"], [job_id], confirmed_facts(confirmed),
+                                         owner, redo=(tailor_id, job_id) if free else None)
+        except Exception:
+            if free:
+                self.accounts.release_redo(tailor_id, job_id)
+            raise
+
+    def _start_tailoring(self, search_run_id: str, job_ids: list[str], extra_info: str,
+                         owner: str, redo: tuple[str, str] | None = None):
         search = self.get_search(search_run_id, owner)
         if search["status"] != DONE:
             raise ValueError("search run is not finished")
@@ -198,17 +234,22 @@ class Engine:
             raise ValueError(f"unknown job ids: {unknown}" if unknown else "no jobs selected")
         est = self.estimate_tailor(len(job_ids))
         status = QUEUED if est.within_cap else STOPPED
-        claim = (self.accounts.claim(owner, "tailor", n=len(job_ids), cost_usd=est.total_usd)
+        n = 0 if redo else len(job_ids)  # a free redo doesn't use the allowance
+        claim = (self.accounts.claim(owner, "tailor", n=n, cost_usd=est.total_usd)
                  if est.within_cap else None)
-        run_id = self._add_run(claim, "tailor", search["cv_id"],
-                               {"job_ids": job_ids, "has_extra_info": bool(extra_info)},
+        request = {"job_ids": job_ids, "has_extra_info": bool(extra_info)}
+        if redo:
+            request["redo_of"] = redo[0]
+        run_id = self._add_run(claim, "tailor", search["cv_id"], request,
                                est.model_dump(), status, parent_id=search_run_id, owner=owner)
         if claim:
             # extra_info is personal data: passed in memory only, never stored in the request
             self._submit(self._run_tailor, run_id, search["cv_id"],
-                         [jobs[j] for j in job_ids], extra_info, owner, claim)
+                         [jobs[j] for j in job_ids], extra_info, owner, claim, redo)
         else:
             self.store.update_run(run_id, status=STOPPED, error="estimate exceeds the cost cap")
+            if redo:
+                self.accounts.release_redo(*redo)
         return run_id, est
 
     def _require_cv(self, cv_id: str) -> None:
@@ -217,7 +258,7 @@ class Engine:
             raise CvDeleted
 
     def _run_tailor(self, run_id: str, cv_id: str, jobs: list[Job], extra_info: str,
-                    owner: str, claim: Claim) -> None:
+                    owner: str, claim: Claim, redo: tuple[str, str] | None = None) -> None:
         meter = CostMeter(self.s)
         self.store.update_run(run_id, status=RUNNING)
         results: list[dict] = []
@@ -254,6 +295,8 @@ class Engine:
             # only CVs actually produced use the allowance
             self.accounts.settle(claim, refund=0 if deleted else len(jobs) - len(results),
                                  spent_usd=meter.record().actual_cost_usd)
+            if redo and not results and not deleted:  # no CV came out: the redo is given back
+                self.accounts.release_redo(*redo)
 
     def get_tailor(self, run_id: str, owner: str = LOCAL_OWNER) -> dict:
         run = self.store.get_run(run_id, "tailor", owner=owner)

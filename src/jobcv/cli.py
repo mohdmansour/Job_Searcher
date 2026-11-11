@@ -7,6 +7,7 @@
   jobcv run-all CV.pdf --title ... --country ... [--max 5] [--pick 1] [--out DIR]
   jobcv cv delete ID
   jobcv sweep
+  jobcv grant USER_ID [--searches N] [--tailors N]   give one account extra free uses
 """
 
 import argparse
@@ -96,6 +97,10 @@ def main(argv: list[str] | None = None, engine: Engine | None = None) -> int:
     sub = p.add_subparsers(dest="cmd", required=True)
     sub.add_parser("countries")
     sub.add_parser("sweep", help="delete expired CVs, runs and PDFs")
+    g = sub.add_parser("grant", help="give one account extra free searches or tailored CVs")
+    g.add_argument("user_id", help="the Clerk user id (GET /api/me shows it)")
+    g.add_argument("--searches", type=int, default=0)
+    g.add_argument("--tailors", type=int, default=0)
 
     cv = sub.add_parser("cv").add_subparsers(dest="cv_cmd", required=True)
     cv.add_parser("add").add_argument("pdf", type=Path)
@@ -141,6 +146,11 @@ def main(argv: list[str] | None = None, engine: Engine | None = None) -> int:
     removed = engine.store.sweep()  # no server may be running to do this
     if args.cmd == "sweep":
         print(f"removed {removed} expired CV(s)")
+    elif args.cmd == "grant":
+        engine.accounts.grant(args.user_id, searches=args.searches, tailors=args.tailors)
+        left = engine.accounts.status(args.user_id)
+        print(f"{args.user_id}: {left['free_searches_left']} free search(es) and "
+              f"{left['free_tailors_left']} free tailored CV(s) left")
     elif args.cmd == "cv" and args.cv_cmd == "add":
         cv_id = engine.add_cv(args.pdf.read_bytes())
         print(f"cv_id: {cv_id}")

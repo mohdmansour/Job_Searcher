@@ -45,7 +45,7 @@ The browser only talks to the website. Next.js forwards `/api/*` to the backend 
 
 **Testing on a phone:** connect the phone to the same Wi-Fi, run `cd web && npm run build && npm run start -- -H 0.0.0.0`, then open `http://<this computer's IP>:3000` on the phone (`ipconfig` shows the IP). Start the backend with that address allowed too, for example `JOBCV_ALLOWED_ORIGINS='["http://localhost:3000","http://<IP>:3000"]'`, or sign-in from the phone is refused (tested 2026-11-11). Stop it when you finish: anyone on that network can reach the site.
 
-**Free allowance:** each account gets one free search and one free tailored CV, with the limits in the configuration table below. List your own account id in `JOBCV_UNLIMITED_USER_IDS` to test without limits. Paid plans are not built yet; the pricing page says they are coming soon.
+**Free allowance:** each account gets one free search and one free tailored CV, with the limits in the configuration table below. List your own account id in `JOBCV_UNLIMITED_USER_IDS` to test without limits. To give one account extra free uses, run `uv run jobcv grant <user_id> --searches 2` (or `--tailors N`); `GET /api/me` shows the id. Paid plans are not built yet; the pricing page says they are coming soon.
 
 **Website tests:** `cd web`, then `npm run lint` (type check), `npm test` (unit), `npm run e2e` (browser, mocked API, no paid calls; desktop, tablet and phone sizes in English and Arabic).
 
@@ -70,6 +70,7 @@ Every route needs a signed-in user (`Authorization: Bearer <Clerk session token>
 | GET | `/runs/{id}` | Status, jobs ranked by score (score, reasons, matched_skills, gaps), `last_updated`, cost |
 | POST | `/tailor` | `{run_id, job_ids[], user_extra_info}` → `{run_id, status, estimate}` |
 | GET | `/tailor/{id}` | Status and, per job: `pdf_url`, review status, warning, remaining violations, change log |
+| POST | `/tailor/{id}/redo` | `{job_id, confirmed: [{label, details}]}`: makes that CV again with the suggestions the user ticked. One free redo per tailored CV for free accounts (403 `redo_used` after); a redo's own result is final |
 | GET | `/files/{tailor_id}/{name}` | PDF download |
 | DELETE | `/cv/{id}` | Deletes the CV with all its runs and PDFs right away |
 

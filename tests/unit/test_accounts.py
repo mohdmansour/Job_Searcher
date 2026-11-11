@@ -196,7 +196,8 @@ def test_the_accounts_database_holds_only_ids_counters_and_amounts(accounts, s):
     db = sqlite3.connect(s.accounts_db)
     columns = {c for (t,) in db.execute("select name from sqlite_master where type='table'")
                for c in [r[1] for r in db.execute(f"pragma table_info({t})")]}
-    assert columns <= {"user_id", "searches", "tailors", "day", "n", "usd"}
+    assert columns <= {"user_id", "searches", "tailors", "bonus_searches", "bonus_tailors",
+                       "day", "n", "usd", "tailor_id", "job_id"}  # run and public job ids only
     assert s.accounts_db not in (s.user_db, s.jobs_cache_db)
 
 
@@ -341,3 +342,56 @@ def test_a_busy_account_gets_a_429_with_a_code(client):
     r = client.post("/search", headers=U, json={
         "cv_id": cv_id, "title": "QA", "country": "United Arab Emirates", "max_results": 3})
     assert r.status_code == 429 and r.json() == {"detail": {"code": "rate_limited"}}
+
+
+# ---------------- extra free uses, given by the owner ----------------
+def test_granting_searches_adds_to_what_is_left(accounts):
+    accounts.settle(accounts.claim("u", "search"))
+    accounts.grant("u", searches=2)
+    assert accounts.status("u")["free_searches_left"] == 2
+
+
+def test_granted_searches_can_all_be_used_then_it_stops(accounts):
+    accounts.grant("u", searches=2)
+    for _ in range(3):  # the normal free one plus the 2 granted
+        accounts.settle(accounts.claim("u", "search"))
+    with refused("allowance_used"):
+        accounts.claim("u", "search")
+
+
+def test_granting_tailored_cvs_works_the_same_way(accounts):
+    accounts.grant("u", tailors=3)
+    assert accounts.status("u")["free_tailors_left"] == 4
+    accounts.settle(accounts.claim("u", "tailor", n=4))
+    assert accounts.status("u")["free_tailors_left"] == 0
+
+
+def test_a_grant_for_one_account_leaves_others_alone(accounts):
+    accounts.grant("u", searches=2)
+    assert accounts.status("v")["free_searches_left"] == 1
+
+
+def test_a_grant_must_be_positive(accounts):
+    with pytest.raises(ValueError):
+        accounts.grant("u", searches=-1)
+
+
+def test_the_command_line_grants_to_an_account(s, capsys):
+    from jobcv.cli import main
+    main(["grant", "user_x", "--searches", "2"], engine=make_engine(s))
+    assert Accounts(s).status("user_x")["free_searches_left"] == 3
+    assert "user_x" in capsys.readouterr().out
+
+
+def test_an_older_accounts_database_is_upgraded_and_keeps_its_counts(s):
+    s.data_dir.mkdir(parents=True, exist_ok=True)
+    db = sqlite3.connect(s.accounts_db)
+    db.executescript("create table usage (user_id text primary key, searches integer not null"
+                     " default 0, tailors integer not null default 0);"
+                     "insert into usage values ('u', 1, 1);")
+    db.commit()
+    db.close()
+    accounts = Accounts(s)
+    assert accounts.status("u")["free_searches_left"] == 0  # what was used stays used
+    accounts.grant("u", searches=2)
+    assert accounts.status("u")["free_searches_left"] == 2

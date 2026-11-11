@@ -53,16 +53,17 @@ def test_an_old_change_log_without_a_label_reads_as_reworded():
 # ---------------- suggestions only the user can act on ----------------
 def test_suggestions_reach_the_result(s):
     out = run(s, suggestions=["Add the dates for your first role."])
-    assert out.suggestions == ["Add the dates for your first role."]
+    assert [s.text for s in out.suggestions] == ["Add the dates for your first role."]
 
 
 def test_suggestions_are_trimmed_deduplicated_and_capped(s):
     many = ["  Add a number to a result.  ", "Add a number to a result.", ""] + [
         f"Suggestion {i}" for i in range(20)]
     out = run(s, suggestions=many)
-    assert out.suggestions[0] == "Add a number to a result."
-    assert "" not in out.suggestions and len(out.suggestions) == MAX_SUGGESTIONS
-    assert len(set(out.suggestions)) == len(out.suggestions)
+    texts = [s.text for s in out.suggestions]
+    assert texts[0] == "Add a number to a result."
+    assert "" not in texts and len(texts) == MAX_SUGGESTIONS
+    assert len(set(texts)) == len(texts)
 
 
 # ---------------- the instructions keep every honesty rule ----------------
