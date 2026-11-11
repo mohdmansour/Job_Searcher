@@ -198,7 +198,10 @@ class Engine:
 
     # ---------------- tailor ----------------
     def start_tailor(self, search_run_id: str, job_ids: list[str], extra_info: str = "",
-                     owner: str = LOCAL_OWNER):
+                     owner: str = LOCAL_OWNER, confirmed: list[tuple[str, str]] | None = None):
+        """`confirmed`: missing skills the user ticked before tailoring (details optional)."""
+        if confirmed:
+            extra_info = "\n\n".join(p for p in (extra_info.strip(), confirmed_facts(confirmed)) if p)
         return self._start_tailoring(search_run_id, job_ids, extra_info, owner)
 
     def start_redo(self, tailor_id: str, job_id: str, confirmed: list[tuple[str, str]],

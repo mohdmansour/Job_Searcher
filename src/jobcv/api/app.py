@@ -105,10 +105,18 @@ class SearchRunOut(BaseModel):
     error: str | None = None
 
 
+class ConfirmedItem(BaseModel):
+    """Something the user ticked as true about themself, with optional details."""
+
+    label: str = Field(min_length=1, max_length=120)
+    details: str = Field(default="", max_length=500)
+
+
 class TailorRequest(BaseModel):
     run_id: str
     job_ids: list[str] = Field(min_length=1, max_length=20)
     user_extra_info: str = Field(default="", max_length=5000)
+    confirmed: list[ConfirmedItem] = Field(default_factory=list, max_length=15)
 
 
 class TailoredJobOut(BaseModel):
@@ -121,11 +129,6 @@ class TailoredJobOut(BaseModel):
     change_log: list[ChangeLogEntry]
     suggestions: Suggestions = Field(default_factory=list)
     redo_available: bool = False  # can this CV be made again with ticked suggestions, for free
-
-
-class ConfirmedItem(BaseModel):
-    label: str = Field(min_length=1, max_length=120)
-    details: str = Field(default="", max_length=500)
 
 
 class RedoRequest(BaseModel):
@@ -273,8 +276,9 @@ def create_app(engine: Engine | None = None, verifier: Verifier | None = None) -
     @app.post("/tailor", status_code=202)
     def start_tailor(engine: EngineDep, user: CurrentUser, req: TailorRequest) -> RunStarted:
         try:
-            run_id, est = engine.start_tailor(req.run_id, req.job_ids, req.user_extra_info,
-                                              owner=user.id)
+            run_id, est = engine.start_tailor(
+                req.run_id, req.job_ids, req.user_extra_info, owner=user.id,
+                confirmed=[(c.label.strip(), c.details.strip()) for c in req.confirmed])
         except ValueError as e:
             raise HTTPException(400, str(e)) from e
         return RunStarted(run_id=run_id, status=engine.get_tailor(run_id, user.id)["status"], estimate=est)

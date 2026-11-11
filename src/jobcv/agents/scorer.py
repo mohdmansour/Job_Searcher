@@ -10,6 +10,8 @@ from jobcv.cost.meter import CostCapExceeded, CostMeter
 from jobcv.schemas import CV, Job, MatchResult
 
 MAX_JOB_CHARS = 8_000  # long postings are mostly boilerplate; caps cost per job
+MAX_MISSING = 10
+MAX_MISSING_CHARS = 60
 
 SPEC = AgentSpec(
     name="scorer",
@@ -34,7 +36,10 @@ Return:
 - reasons: 2-4 short sentences explaining the score
 - matched_skills: requirements of the job that the CV clearly shows (CV wording)
 - gaps: important job requirements the CV does not show. Be specific and complete.
-Write reasons and gaps in the CV's language ({cv_language}).
+- missing_skills: up to 10 skills, tools, methods or qualifications this job asks for that the
+  CV does not show, ONE per item in 1-4 words (e.g. "Python", "VLANs", "Firewall management",
+  "ISTQB certification"), most important first. Never several in one item. Empty if none.
+Write reasons, gaps and missing_skills in the CV's language ({cv_language}).
 
 CV (JSON):
 {cv_json}
@@ -62,7 +67,17 @@ def score_job(cv: CV, job: Job, settings: Settings, meter: CostMeter,
         description=job.description[:MAX_JOB_CHARS],
     )
     result, _ = run_agent(SPEC, prompt, MatchResult, settings, meter, llm=llm)
-    return result
+    return result.model_copy(update={"missing_skills": _clean_missing(result.missing_skills)})
+
+
+def _clean_missing(items: list[str]) -> list[str]:
+    """Model output: trimmed, without blanks or repeats, short, and at most MAX_MISSING."""
+    out: list[str] = []
+    for item in items:
+        text = " ".join(item.split())[:MAX_MISSING_CHARS].strip()
+        if text and text.casefold() not in {o.casefold() for o in out}:
+            out.append(text)
+    return out[:MAX_MISSING]
 
 
 def rank_jobs(cv: CV, jobs: list[Job], settings: Settings, meter: CostMeter,

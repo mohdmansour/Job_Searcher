@@ -38,7 +38,13 @@ export type Job = {
   fetched_at: string
   language: 'en' | 'ar' | 'other'
 }
-export type Match = { score: number; reasons: string[]; matched_skills: string[]; gaps: string[] }
+export type Match = {
+  score: number
+  reasons: string[]
+  matched_skills: string[]
+  gaps: string[]
+  missing_skills?: string[] // one item each; the user can tick the ones they have
+}
 export type RankedJob = { job: Job; match: Match | null; error: string | null }
 
 export type RunStarted = { run_id: string; status: RunStatus; estimate: Estimate }
@@ -82,7 +88,7 @@ export type TailorRun = {
 
 export type SearchForm = { country: string; cities: string[]; remote: boolean; max_results: number }
 export type SearchRequest = SearchForm & { cv_id: string; title: string; more_titles?: string[]; force_refresh?: boolean }
-export type TailorRequest = { run_id: string; job_ids: string[]; user_extra_info?: string }
+export type TailorRequest = { run_id: string; job_ids: string[]; user_extra_info?: string; confirmed?: ConfirmedItem[] }
 
 // ---------------- errors ----------------
 export type ApiErrorCode =

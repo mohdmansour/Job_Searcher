@@ -34,7 +34,7 @@ type AppState = {
   clearSelected: () => void
   // ---- real: tailoring ----
   items: TailorItem[]
-  startTailor: (jobIds: string[], extraInfo: string) => Promise<void>
+  startTailor: (jobIds: string[], extraInfo: string, confirmed?: ConfirmedItem[]) => Promise<void>
   retryJob: (item: TailorItem) => Promise<void>
   redoJob: (item: TailorItem, confirmed: ConfirmedItem[]) => Promise<void>
   // ---- real: the free allowance (null until known) ----
@@ -223,13 +223,13 @@ export function AppStateProvider({ initialLocale, children }: { initialLocale: L
   }, [])
 
   const startTailor = useCallback(
-    async (jobIds: string[], extraInfo: string) => {
+    async (jobIds: string[], extraInfo: string, confirmed: ConfirmedItem[] = []) => {
       if (!runId || !run) return
       const jobs = jobIds.flatMap((id) => {
         const job = run.jobs.find((r) => r.job.id === id)?.job
         return job ? [{ id: job.id, title: job.title, company: job.company }] : []
       })
-      const started = await api.startTailor({ run_id: runId, job_ids: jobIds, user_extra_info: extraInfo })
+      const started = await api.startTailor({ run_id: runId, job_ids: jobIds, user_extra_info: extraInfo, confirmed })
       addBatch({ id: started.run_id, searchRunId: runId, jobs })
       setSelected([])
     },

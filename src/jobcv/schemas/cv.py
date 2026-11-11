@@ -52,6 +52,9 @@ class MatchResult(BaseModel):
     reasons: list[str]
     matched_skills: list[str]
     gaps: list[str]
+    # one item each, e.g. "Python": what the job asks for and the CV doesn't show. The user can
+    # tick the ones they really have before tailoring. Empty for matches made before this.
+    missing_skills: list[str] = Field(default_factory=list)
 
 
 class ChangeLogEntry(BaseModel):

@@ -7,6 +7,8 @@ import { api, ApiError, type ApiErrorCode, type PricedEstimate } from '@/lib/api
 import { useApp } from '@/lib/app-state'
 import { formatUsd } from '@/lib/format'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 
@@ -16,6 +18,7 @@ export function ConfirmDialog({ open, onClose }: { open: boolean; onClose: () =>
   const ref = useRef<HTMLDialogElement>(null)
   const [estimate, setEstimate] = useState<PricedEstimate | null>(null)
   const [extra, setExtra] = useState('') // personal data: held only while the dialog is open
+  const [picked, setPicked] = useState<Record<string, string>>({}) // missing skill -> details; same
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<ApiErrorCode | null>(null)
 
@@ -42,6 +45,21 @@ export function ConfirmDialog({ open, onClose }: { open: boolean; onClose: () =>
     }
   }, [open, count])
 
+  // What the selected jobs ask for and the CV doesn't show, one item each, without repeats.
+  const missing: string[] = []
+  for (const id of selected) {
+    for (const skill of run?.jobs.find((r) => r.job.id === id)?.match?.missing_skills ?? []) {
+      if (!missing.some((m) => m.toLowerCase() === skill.toLowerCase())) missing.push(skill)
+    }
+  }
+  const toggleSkill = (skill: string, on: boolean) =>
+    setPicked((p) => {
+      const next = { ...p }
+      if (on) next[skill] = next[skill] ?? ''
+      else delete next[skill]
+      return next
+    })
+
   const overCap = estimate !== null && !estimate.within_cap
   // Free accounts see their allowance; owner accounts see the price in dollars.
   const free = allowance !== null && !allowance.unlimited
@@ -52,8 +70,12 @@ export function ConfirmDialog({ open, onClose }: { open: boolean; onClose: () =>
     setBusy(true)
     setError(null)
     try {
-      await startTailor(selected, extra.trim())
+      const confirmed = Object.entries(picked)
+        .filter(([skill]) => missing.includes(skill))
+        .map(([label, details]) => ({ label, details: details.trim() }))
+      await startTailor(selected, extra.trim(), confirmed)
       setExtra('')
+      setPicked({})
       onClose()
       router.push('/generate')
     } catch (e) {
@@ -109,6 +131,34 @@ export function ConfirmDialog({ open, onClose }: { open: boolean; onClose: () =>
               )
             })}
           </ul>
+        )}
+
+        {missing.length > 0 && (
+          <fieldset className="mt-5" data-testid="missing-skills">
+            <legend className="text-sm font-medium">{t.results.missingTitle}</legend>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{t.results.missingHint}</p>
+            <ul className="mt-3 flex flex-col gap-3 text-sm">
+              {missing.map((skill) => (
+                <li key={skill} className="flex flex-col gap-2">
+                  <label className="flex cursor-pointer items-start gap-3">
+                    <Checkbox checked={skill in picked} onCheckedChange={(v) => toggleSkill(skill, Boolean(v))} className="mt-0.5 size-5" />
+                    <span dir="auto" className="[overflow-wrap:anywhere]">{skill}</span>
+                  </label>
+                  {skill in picked && (
+                    <Input
+                      value={picked[skill]}
+                      onChange={(e) => setPicked((p) => ({ ...p, [skill]: e.target.value }))}
+                      maxLength={500}
+                      dir="auto"
+                      aria-label={t.generate.detailsLabel(skill)}
+                      placeholder={t.generate.detailsPlaceholder}
+                      className="ms-8 h-11 w-auto bg-card text-base sm:text-sm"
+                    />
+                  )}
+                </li>
+              ))}
+            </ul>
+          </fieldset>
         )}
 
         <div className="mt-5 flex flex-col gap-2">

@@ -307,7 +307,7 @@ test.describe('refresh and selection', () => {
     await page.getByRole('button', { name: 'Confirm and generate' }).click()
     await expect(page.getByRole('heading', { name: 'Tailored CVs' })).toBeVisible()
     expect(JSON.parse(calls.find((c) => c.key === 'POST /tailor')!.body!)).toEqual({
-      run_id: 'run-1', job_ids: ['linkedin:1'], user_extra_info: 'SECRET-EXTRA-DETAIL',
+      run_id: 'run-1', job_ids: ['linkedin:1'], user_extra_info: 'SECRET-EXTRA-DETAIL', confirmed: [],
     })
     expect(await page.evaluate(() => JSON.stringify(localStorage))).not.toContain('SECRET-EXTRA-DETAIL')
   })
@@ -336,6 +336,54 @@ test.describe('refresh and selection', () => {
     await page.getByRole('button', { name: 'Review & generate' }).click()
     await expect(page.getByText(/too many jobs for one run/)).toBeVisible()
     await expect(page.getByRole('button', { name: 'Confirm and generate' })).toBeDisabled()
+  })
+})
+
+// ---------------- missing skills ticked before tailoring ----------------
+test.describe('missing skills in the review box', () => {
+  const withMissing = {
+    ...doneRun,
+    jobs: [
+      { ...JOBS[0], match: { ...JOBS[0].match!, missing_skills: ['Python', 'VLANs'] } },
+      { ...JOBS[1], match: { score: 40, reasons: ['r'], matched_skills: [], gaps: ['g'], missing_skills: ['python', 'Jira'] } },
+    ],
+  }
+  const openReview = async (page: Page, selected: string[], runBody: object = withMissing, more: Handlers = {}, review = 'Review & generate') => {
+    const calls = await mockApi(page, { 'GET /runs/run-1': (r) => json(r, runBody), ...more })
+    await seed(page, session({ selected }))
+    await page.goto('/results')
+    await page.getByRole('button', { name: review }).click()
+    return calls
+  }
+
+  test('lists each missing skill once, and sends the ticked ones with their details', async ({ page }) => {
+    const calls = await openReview(page, ['linkedin:1', 'linkedin:2'], withMissing, {
+      'POST /tailor': (r) => json(r, { run_id: 'tailor-1', status: 'queued', estimate: ESTIMATE }, 202),
+      'GET /tailor/tailor-1': (r) => json(r, { tailor_id: 'tailor-1', status: 'running', estimate: ESTIMATE, results: [], error: null }),
+    })
+    const box = page.getByTestId('missing-skills')
+    await expect(box.getByRole('checkbox')).toHaveCount(3) // Python, VLANs, Jira: "python" is the same skill
+    await box.getByRole('checkbox', { name: 'Python' }).click()
+    await box.getByLabel('Details for Python (optional)').fill('SECRET-SKILL-DETAIL 2 years')
+    await box.getByRole('checkbox', { name: 'Jira' }).click()
+    await expect(box.getByText(/Only tick what’s true/)).toBeVisible()
+    await page.getByRole('button', { name: 'Confirm and generate' }).click()
+    await expect(page.getByRole('heading', { name: 'Tailored CVs' })).toBeVisible()
+    expect(JSON.parse(calls.find((c) => c.key === 'POST /tailor')!.body!)).toMatchObject({
+      confirmed: [{ label: 'Python', details: 'SECRET-SKILL-DETAIL 2 years' }, { label: 'Jira', details: '' }],
+    })
+    expect(await page.evaluate(() => JSON.stringify(localStorage))).not.toContain('SECRET-SKILL-DETAIL')
+  })
+
+  test('jobs scored before this feature show no list', async ({ page }) => {
+    await openReview(page, ['linkedin:1'], doneRun)
+    await expect(page.getByTestId('missing-skills')).toHaveCount(0)
+  })
+
+  test('works in Arabic', async ({ page, context, baseURL }) => {
+    await context.addCookies([{ name: 'locale', value: 'ar', url: baseURL! }])
+    await openReview(page, ['linkedin:1'], withMissing, {}, 'المراجعة والإنشاء')
+    await expect(page.getByTestId('missing-skills')).toContainText('مهارات تطلبها هذه الوظائف ولا تظهر في سيرتك')
   })
 })
 
