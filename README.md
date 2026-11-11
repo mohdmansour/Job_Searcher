@@ -106,6 +106,23 @@ Settings come from `.env` or environment variables with the `JOBCV_` prefix. Sec
 | `JOBCV_DAILY_FREE_BUDGET_USD` | `5.0` | Total free spending per day, all accounts together. Then free use pauses until the next day (UTC) |
 | `JOBCV_UNLIMITED_USER_IDS` | not set | Clerk user ids with no limits (owners), comma-separated. `GET /api/me` shows your id |
 
+## Deploy to Railway
+
+Two services from this one GitHub repository. Only the website is public; the backend is reachable only through Railway's private network. Keys go in each service's **Variables**, never in code.
+
+**Backend** (repository root, built from [Dockerfile](Dockerfile): Python, Tesseract with English and Arabic, Chromium)
+- Don't generate a public domain for it.
+- Attach a **volume** mounted at `/data`: CVs, runs and the allowance counters live there and must survive redeploys.
+- Keep **1 replica**: the backend keeps running jobs and its SQLite files in one process.
+- Variables: `OPENAI_API_KEY`, `APIFY_TOKEN`, `CLERK_SECRET_KEY`, `PORT=8000`, `JOBCV_ALLOWED_ORIGINS=https://<the website's address>` (comma-separated if several), and optionally `JOBCV_UNLIMITED_USER_IDS`.
+
+**Website** (root directory `web`, built by Railway as a Next.js app)
+- Variables: `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, and `BACKEND_URL=http://${{backend.RAILWAY_PRIVATE_DOMAIN}}:8000` (use your backend service's name). They're read when the site is built, so redeploy after changing them.
+- Start command: `npm run start -- -H 0.0.0.0`.
+- Generate a domain under Networking, then put that address in the backend's `JOBCV_ALLOWED_ORIGINS` and redeploy the backend.
+
+**Clerk:** development keys work for a first test (the sign-in shows "Development mode"). For a real launch, create Clerk's production instance, which needs your own domain, set up Google and Facebook sign-in for it, and set `CLERK_FRONTEND_HOST` on the website to Clerk's production address so the security policy allows it.
+
 ## Tests
 
 ```bash

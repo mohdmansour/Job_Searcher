@@ -49,3 +49,12 @@ def test_job_cache_and_user_db_are_separate_files(tmp_path):
     s = make(tmp_path)
     assert s.jobs_cache_db != s.user_db
     assert s.jobs_cache_db.parent == tmp_path
+
+
+def test_allowed_origins_can_be_comma_separated_or_a_list(monkeypatch, tmp_path):
+    from jobcv.config import Settings
+    monkeypatch.setenv("JOBCV_ALLOWED_ORIGINS", "https://a.up.railway.app, https://nextrole.example")
+    assert Settings(_env_file=None, data_dir=tmp_path).allowed_origins == [
+        "https://a.up.railway.app", "https://nextrole.example"]
+    monkeypatch.setenv("JOBCV_ALLOWED_ORIGINS", '["https://b.up.railway.app"]')
+    assert Settings(_env_file=None, data_dir=tmp_path).allowed_origins == ["https://b.up.railway.app"]

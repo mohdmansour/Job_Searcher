@@ -4,6 +4,7 @@ Secrets use their conventional names (OPENAI_API_KEY, APIFY_TOKEN) and are Secre
 so they never appear in repr/logs.
 """
 
+import json
 from functools import lru_cache
 from pathlib import Path
 from typing import Annotated
@@ -48,7 +49,8 @@ class Settings(BaseSettings):
     clerk_jwt_key: str | None = Field(
         None, validation_alias=AliasChoices("CLERK_JWT_KEY", "JOBCV_CLERK_JWT_KEY")
     )
-    allowed_origins: list[str] = ["http://localhost:3000"]  # sites allowed to use a token
+    # sites allowed to use a token: comma-separated or a JSON list in the env var
+    allowed_origins: Annotated[list[str], NoDecode] = ["http://localhost:3000"]
 
     # --- LLM (provider is always OpenAI) ---
     strong_model: str = "gpt-5.4"  # CV Parser, CV Editor, CV Reviewer
@@ -99,10 +101,14 @@ class Settings(BaseSettings):
     # Clerk user ids with no limits (the owner), comma-separated in the env var
     unlimited_user_ids: Annotated[list[str], NoDecode] = Field(default_factory=list)
 
-    @field_validator("unlimited_user_ids", mode="before")
+    @field_validator("unlimited_user_ids", "allowed_origins", mode="before")
     @classmethod
-    def _split_ids(cls, v):
-        return [i.strip() for i in v.split(",") if i.strip()] if isinstance(v, str) else v
+    def _split_list(cls, v):
+        if not isinstance(v, str):
+            return v
+        if v.strip().startswith("["):
+            return json.loads(v)
+        return [i.strip() for i in v.split(",") if i.strip()]
 
     # --- storage ---
     data_dir: Path = Path("data")

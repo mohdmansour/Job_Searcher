@@ -1,0 +1,16 @@
+# Nothing private or unneeded goes into the backend image.
+.env
+.env.*
+!.env.example
+data/
+output/
+tessdata/
+.venv/
+.git/
+.claude/
+web/
+tests/
+scripts/
+tasks/
+**/__pycache__/
+*.pyc
