@@ -34,6 +34,8 @@ RUN mkdir -p /app/tessdata && cd /app/tessdata \
 # Python libraries, exactly as locked (no test tools)
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
+# README.md: pyproject.toml names it as the package description, so the install needs it
+COPY README.md ./
 COPY src ./src
 RUN uv sync --frozen --no-dev
 
